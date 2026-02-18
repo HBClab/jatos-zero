@@ -88,8 +88,21 @@ Outputs land under `data/` using the subject -> task folder pattern enforced by 
 
 ## Development Workflow
 - Lint with `python -m flake8 code` before committing.
+- Run `pytest --collect-only` from repo root as a quick smoke check for test discovery.
 - Run `pytest` (tests live under `tests/`) to cover threshold logic, expected artifact names, and any new utilities.
 - Keep notebooks or ad-hoc experiments outside tracked directories, or convert them into reproducible scripts.
+
+## Testing Commands (Local)
+```bash
+# lint
+python -m flake8 code
+
+# discovery smoke check
+pytest --collect-only
+
+# full local test run
+pytest
+```
 
 ## Extending the Pipeline
 1. Add the new task code and study IDs to `Handler.IDs`.
