@@ -1,0 +1,34 @@
+name: Boost CA workflow
+
+on:
+  schedule:
+    - cron: '1 0 * * *'
+  push:
+    branches:
+      - main
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v3
+      with:
+        python-version: "3.10"
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install flake8 pytest
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+    - name: Run Python script
+      run: |
+        python code/main_handler.py all
+    - name: Commit and push changes to main
+      run: |
+        git config --global user.name "GitHub Actions Bot"
+        git config --global user.email "github-actions[bot]@users.noreply.github.com"
+        git checkout main
+        git add .
+        git commit -m "Automated changes from GitHub Actions"
+        git push origin main

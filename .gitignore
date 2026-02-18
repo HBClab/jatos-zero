@@ -1,0 +1,39 @@
+# Local environments
+.venv/
+venv/
+.env
+.env.local
+.direnv/
+
+# Python caches
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ipynb_checkpoints/
+
+# Packaging / build assets
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# Tooling + OS noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Logs & temp files
+*.log
+*.tmp
+meta/*.tmp
+
+# Coverage & test outputs
+htmlcov/
+.coverage*
+.pyre/
+.mr.developer.cfg
+
