@@ -8,3 +8,4 @@ Requests
 scipy
 seaborn
 termcolor
+tomli

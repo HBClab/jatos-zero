@@ -8,6 +8,7 @@ from data_processing.utils import CONVERT_TO_CSV
 from data_processing.wl_qc import WL_QC
 from data_processing.plot_utils import CC_PLOTS, MEM_PLOTS, PS_PLOTS
 from data_processing.save_utils import SAVE_EVERYTHING
+from config.pipeline_config import load_pipeline_config
 import atexit
 import os
 from termcolor import cprint
@@ -33,6 +34,12 @@ class Handler:
             "VNB": [957, 971, 994, 915, 928, 943],
             "WL": [958, 972, 995, 910, 927, 944]
         }
+
+        self.pipeline_config = load_pipeline_config()
+        cprint(
+            f"Loaded pipeline config from {self.pipeline_config.config_path}",
+            "cyan",
+        )
 
         self._meta_recreator = META_RECREATE()
         self._meta_rebuild_pending = False

@@ -1,0 +1,92 @@
+schema_version = 1
+
+[pipeline]
+enable_plots = false
+
+[pipeline.defaults.columns]
+subject = "subject_id"
+session = "session_number"
+
+[pipeline.tasks.AF]
+domain = "cc"
+
+[pipeline.tasks.AF.qc]
+threshold = 0.5
+max_rt = 1800
+
+[pipeline.tasks.ATS]
+domain = "cc"
+
+[pipeline.tasks.ATS.qc]
+threshold = 0.5
+max_rt = 1800
+
+[pipeline.tasks.DSST]
+domain = "ps"
+
+[pipeline.tasks.DSST.qc]
+threshold = 0.6
+max_rt = 125
+
+[pipeline.tasks.DWL]
+domain = "wl"
+
+[pipeline.tasks.FN]
+domain = "mem"
+
+[pipeline.tasks.FN.qc]
+threshold = 0.5
+max_rt = 4000
+
+[pipeline.tasks.LC]
+domain = "ps"
+
+[pipeline.tasks.LC.qc]
+threshold = 0.6
+max_rt = 30000
+
+[pipeline.tasks.NF]
+domain = "cc"
+
+[pipeline.tasks.NF.qc]
+threshold = 0.5
+max_rt = 1800
+
+[pipeline.tasks.NNB]
+domain = "cc"
+
+[pipeline.tasks.NNB.qc]
+threshold = 0.5
+max_rt = 1800
+
+[pipeline.tasks.NTS]
+domain = "cc"
+
+[pipeline.tasks.NTS.qc]
+threshold = 0.5
+max_rt = 1800
+
+[pipeline.tasks.PC]
+domain = "ps"
+
+[pipeline.tasks.PC.qc]
+threshold = 0.6
+max_rt = 30000
+
+[pipeline.tasks.SM]
+domain = "mem"
+
+[pipeline.tasks.SM.qc]
+threshold = 0.5
+max_rt = 2000
+
+[pipeline.tasks.VNB]
+domain = "cc"
+
+[pipeline.tasks.VNB.qc]
+threshold = 0.5
+max_rt = 1800
+
+[pipeline.tasks.WL]
+domain = "wl"
+
