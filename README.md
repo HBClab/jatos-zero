@@ -43,12 +43,12 @@ run.py                  # Flask placeholder (not yet active)
 5. **Persist** – `SAVE_EVERYTHING` stores per-participant CSVs and plots under `data/<study>/<site>/<subject>/<task>/`. Once the task artifacts are saved, `META_RECREATE` is invoked for every domain so the aggregate CSVs in `meta/` stay synchronized with the subject-level cache.
 
 ## Supported Tasks
-| Construct | Tasks | Notes |
-|-----------|-------|-------|
-| CC (Cognitive Control) | `AF`, `NF`, `ATS`, `NTS`, `NNB`, `VNB` | Shared QC thresholds at 50% accuracy, optional task-switching logic for ATS/NTS |
-| PS (Psychomotor Speed) | `PC`, `LC`, `DSST` | Separate RT limits for LC/PC vs DSST; exports accuracy and correct-count masters |
-| MEM (Face/Scene Memory) | `FN`, `SM` | Captures per-condition accuracy, mean RT, and counts into `mem_master.csv` |
-| WL (Word Learning + Delayed) | `WL`, `DWL` | Combines learning/distraction/immediate blocks with delayed recall; masters upsert rows per subject/session |
+| Construct                    | Tasks                                  | Notes                                                                                                       |
+| ---------------------------- | -------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| CC (Cognitive Control)       | `AF`, `NF`, `ATS`, `NTS`, `NNB`, `VNB` | Shared QC thresholds at 50% accuracy, optional task-switching logic for ATS/NTS                             |
+| PS (Psychomotor Speed)       | `PC`, `LC`, `DSST`                     | Separate RT limits for LC/PC vs DSST; exports accuracy and correct-count masters                            |
+| MEM (Face/Scene Memory)      | `FN`, `SM`                             | Captures per-condition accuracy, mean RT, and counts into `mem_master.csv`                                  |
+| WL (Word Learning + Delayed) | `WL`, `DWL`                            | Combines learning/distraction/immediate blocks with delayed recall; masters upsert rows per subject/session |
 
 To target a single task, run `python code/main_handler.py WL`. To mirror the nightly sweep, use `python code/main_handler.py all`.
 
