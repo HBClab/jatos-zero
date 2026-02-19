@@ -26,6 +26,7 @@ enable_plots = false
 
 [pipeline.tasks.AF]
 domain = "cc"
+task_ids = [945]
 """.strip(),
     )
 
@@ -47,6 +48,7 @@ enable_plots = false
 
 [pipeline.tasks.AF]
 domain = "cc"
+task_ids = [945]
 """.strip(),
     )
 
@@ -73,6 +75,7 @@ mystery = "unexpected"
 
 [pipeline.tasks.AF]
 domain = "cc"
+task_ids = [945]
 """.strip(),
     )
 
@@ -94,6 +97,7 @@ enable_plots = false
 
 [pipeline.tasks.AF]
 domain = "cognitive"
+task_ids = [945]
 """.strip(),
     )
 
@@ -114,6 +118,7 @@ schema_version = 1
 enable_plots = false
 
 [pipeline.tasks.AF]
+task_ids = [945]
 [pipeline.tasks.AF.qc]
 threshold = 0.5
 """.strip(),
@@ -122,6 +127,27 @@ threshold = 0.5
     with pytest.raises(
         PipelineConfigValidationError,
         match=r"pipeline\.tasks\.AF\.domain",
+    ):
+        load_pipeline_config(config_path, known_tasks={"AF"})
+
+
+def test_validation_rejects_missing_task_ids_key(tmp_path: Path) -> None:
+    config_path = _write_config(
+        tmp_path,
+        """
+schema_version = 1
+
+[pipeline]
+enable_plots = false
+
+[pipeline.tasks.AF]
+domain = "cc"
+""".strip(),
+    )
+
+    with pytest.raises(
+        PipelineConfigValidationError,
+        match=r"pipeline\.tasks\.AF\.task_ids",
     ):
         load_pipeline_config(config_path, known_tasks={"AF"})
 
@@ -137,9 +163,11 @@ enable_plots = false
 
 [pipeline.tasks.AF]
 domain = "cc"
+task_ids = [945]
 
 [pipeline.tasks.UNKNOWN_TASK]
 domain = "cc"
+task_ids = [123]
 """.strip(),
     )
 

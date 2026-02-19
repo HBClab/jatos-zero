@@ -14,6 +14,7 @@ def test_loader_reads_default_pipeline_toml(repo_root: Path) -> None:
     assert config.config_path == expected_path
     assert config.schema_version == 1
     assert "AF" in config.pipeline.tasks
+    assert config.pipeline.tasks["AF"].task_ids == [945, 960, 990, 898, 919, 932]
 
 
 def test_loader_fails_fast_when_config_missing(tmp_path: Path) -> None:
@@ -21,4 +22,3 @@ def test_loader_fails_fast_when_config_missing(tmp_path: Path) -> None:
 
     with pytest.raises(FileNotFoundError, match="Missing pipeline config"):
         load_pipeline_config(missing_path)
-

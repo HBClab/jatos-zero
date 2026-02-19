@@ -19,23 +19,26 @@ warnings.filterwarnings("ignore")
 class Handler:
 
     def __init__(self):
+        self.task_order = [
+            "AF",
+            "NF",
+            "NTS",
+            "ATS",
+            "NNB",
+            "VNB",
+            "WL",
+            "DWL",
+            "FN",
+            "SM",
+            "PC",
+            "LC",
+            "DSST",
+        ]
+        self.pipeline_config = load_pipeline_config(known_tasks=self.task_order)
         self.IDs = {
-            "AF": [945, 960, 990, 898, 919, 932],
-            "ATS": [947, 961, 984, 918, 920, 933],
-            "DSST": [949, 975, 986, 901, 959, 935],
-            "DWL": [948, 974, 985, 900, 921, 934],
-            "FN": [950, 964, 987, 902, 923, 936],
-            "LC": [951, 976, 988, 903, 924, 937],
-            "NF": [980, 981, 982, 978, 979, 977],
-            "NNB": [946, 967, 989, 905, 929, 939],
-            "NTS": [953, 968, 991, 906, 930, 940],
-            "PC": [954, 969, 992, 912, 925, 941],
-            "SM": [955, 970, 993, 916, 926, 996],
-            "VNB": [957, 971, 994, 915, 928, 943],
-            "WL": [958, 972, 995, 910, 927, 944]
+            task_name: task_config.task_ids
+            for task_name, task_config in self.pipeline_config.pipeline.tasks.items()
         }
-
-        self.pipeline_config = load_pipeline_config(known_tasks=self.IDs.keys())
         cprint(
             f"Loaded pipeline config from {self.pipeline_config.config_path}",
             "cyan",
@@ -45,6 +48,26 @@ class Handler:
         self._meta_rebuild_pending = False
         atexit.register(self._run_meta_if_needed)
         self._skipped_subjects: list[dict[str, object]] = []
+
+    def configured_tasks(self) -> list[str]:
+        configured = set(self.pipeline_config.pipeline.tasks.keys())
+        return [task for task in self.task_order if task in configured]
+
+    def _validate_runtime_task(self, task: str) -> None:
+        if task not in self.task_order:
+            known_tasks = ", ".join(sorted(self.task_order))
+            raise ValueError(
+                f"Unknown task '{task}'. Allowed known tasks: {known_tasks}"
+            )
+        if task not in self.IDs:
+            raise ValueError(
+                f"Task '{task}' is not enabled in config/pipeline.toml"
+            )
+
+    def run(self, task: str):
+        if task == "all":
+            return [self.pull(configured_task) for configured_task in self.configured_tasks()]
+        return self.pull(task)
 
     @staticmethod
     def _normalize_category_value(category):
@@ -88,6 +111,7 @@ class Handler:
         self._meta_rebuild_pending = False
 
     def pull(self, task):
+        self._validate_runtime_task(task)
         pull_instance = Pull(
             self.IDs[task],
             tease="WEEEEEEEEEEEEEE",
@@ -100,6 +124,7 @@ class Handler:
         return self.convert_to_csv(txt_dfs, task)
 
     def convert_to_csv(self, txt_dfs, task):
+        self._validate_runtime_task(task)
         csv_instance = CONVERT_TO_CSV(task)
         csv_dfs = csv_instance.convert_to_csv(txt_dfs)
         result = self.choose_construct(csv_dfs, task)
@@ -356,11 +381,12 @@ class Handler:
 if __name__ == '__main__':
     import sys
 
-    task_list = ['AF', 'NF', 'NTS', 'ATS', 'NNB', 'VNB', 'WL', 'DWL', 'FN', 'SM', 'PC', 'LC', 'DSST']
-    if sys.argv[1] == 'all':
-        instance = Handler()
-        for task in task_list:
-            csv_dfs = instance.pull(task=task)
-    elif sys.argv[1] in task_list:
-        instance = Handler()
-        csv_dfs = instance.pull(task=sys.argv[1])
+    if len(sys.argv) < 2:
+        raise SystemExit("Usage: python beh/main_handler.py <TASK|all>")
+
+    instance = Handler()
+    try:
+        instance.run(sys.argv[1])
+    except ValueError as err:
+        cprint(str(err), "red")
+        raise SystemExit(1)

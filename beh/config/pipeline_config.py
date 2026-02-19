@@ -30,6 +30,7 @@ class TaskQCConfig:
 @dataclass(frozen=True)
 class TaskRouteConfig:
     domain: str
+    task_ids: list[int] = field(default_factory=list)
     qc: TaskQCConfig = field(default_factory=TaskQCConfig)
 
 
@@ -132,13 +133,31 @@ def _load_task_routes(
             )
 
         task_table = _as_dict(raw_task, f"pipeline.tasks.{task_name}")
-        _reject_unknown_keys(task_table, {"domain", "qc"}, task_key_path)
+        _reject_unknown_keys(task_table, {"domain", "task_ids", "qc"}, task_key_path)
         raw_domain = _require_key(task_table, "domain", task_key_path)
         domain = _validate_string(raw_domain, f"{task_key_path}.domain")
         if domain not in ALLOWED_DOMAINS:
             raise PipelineConfigValidationError(
                 f"Invalid domain '{task_key_path}.domain': expected one of {sorted(ALLOWED_DOMAINS)}"
             )
+        raw_task_ids = _require_key(task_table, "task_ids", task_key_path)
+        if not isinstance(raw_task_ids, list):
+            raise PipelineConfigValidationError(
+                f"Expected '{task_key_path}.task_ids' to be a list, "
+                f"found {type(raw_task_ids).__name__}"
+            )
+        if not raw_task_ids:
+            raise PipelineConfigValidationError(
+                f"Expected '{task_key_path}.task_ids' to be a non-empty list"
+            )
+        task_ids: list[int] = []
+        for idx, task_id in enumerate(raw_task_ids):
+            if not _is_int(task_id):
+                raise PipelineConfigValidationError(
+                    f"Expected '{task_key_path}.task_ids[{idx}]' to be an integer, "
+                    f"found {type(task_id).__name__}"
+                )
+            task_ids.append(task_id)
 
         raw_qc = _as_dict(task_table.get("qc"), f"pipeline.tasks.{task_name}.qc")
         _reject_unknown_keys(
@@ -163,6 +182,7 @@ def _load_task_routes(
 
         routes[task_name] = TaskRouteConfig(
             domain=domain,
+            task_ids=task_ids,
             qc=TaskQCConfig(
                 threshold=threshold,
                 max_rt=max_rt,

@@ -183,22 +183,22 @@ This feature is complete when:
 ---
 
 ***Checkpoint 1: Config Module Skeleton + TOML Loader***
-- [ ] Add a config module under `beh/config/` (for example: `beh/config/pipeline_config.py`) with typed models/dicts for schema version, pipeline defaults, tasks, and QC fields.
-- [ ] Implement TOML loading from `config/pipeline.toml` as the only supported config source.
-- [ ] Wire loader entry into `beh/main_handler.py` startup path without changing task execution behavior yet.
-- [ ] A test: add `tests/config/test_loader.py` to verify successful default-path load and fail-fast behavior when `config/pipeline.toml` is missing.
+- [x] Add a config module under `beh/config/` (for example: `beh/config/pipeline_config.py`) with typed models/dicts for schema version, pipeline defaults, tasks, and QC fields.
+- [x] Implement TOML loading from `config/pipeline.toml` as the only supported config source.
+- [x] Wire loader entry into `beh/main_handler.py` startup path without changing task execution behavior yet.
+- [x] A test: add `tests/config/test_loader.py` to verify successful default-path load and fail-fast behavior when `config/pipeline.toml` is missing.
 
 ***Checkpoint 2: Strict Schema Validation***
-- [ ] Implement fail-fast validation for required keys and types (`schema_version`, `pipeline`, task/domain blocks).
-- [ ] Enforce hard errors on unknown keys at any nesting level with key-path details in error messages.
-- [ ] Enforce domain mapping validity (`cc`, `mem`, `ps`, `wl`) and reject unknown task definitions in config.
-- [ ] A test: add `tests/config/test_validation.py` cases for missing keys, bad types, and unknown-key failures.
+- [x] Implement fail-fast validation for required keys and types (`schema_version`, `pipeline`, task/domain blocks).
+- [x] Enforce hard errors on unknown keys at any nesting level with key-path details in error messages.
+- [x] Enforce domain mapping validity (`cc`, `mem`, `ps`, `wl`) and reject unknown task definitions in config.
+- [x] A test: add `tests/config/test_validation.py` cases for missing keys, bad types, and unknown-key failures.
 
 ***Checkpoint 3: Task Selection and Unknown-Task Runtime Errors***
-- [ ] Update orchestration in `beh/main_handler.py` so only configured known-task subset is runnable.
-- [ ] Make omitted known tasks not run when executing `all`.
-- [ ] Make unknown runtime task requests fail explicitly (non-zero/error path) before any side effects.
-- [ ] A test: add/extend `tests/e2e/` coverage asserting omitted tasks are skipped and unknown tasks raise with no outputs written.
+- [x] Update orchestration in `beh/main_handler.py` so only configured known-task subset is runnable.
+- [x] Make omitted known tasks not run when executing `all`.
+- [x] Make unknown runtime task requests fail explicitly (non-zero/error path) before any side effects.
+- [x] A test: add/extend `tests/e2e/` coverage asserting omitted tasks are skipped and unknown tasks raise with no outputs written.
 
 ***Checkpoint 4: QC Param + Column Fallback Resolution***
 - [ ] Add resolver logic for per-task QC overrides (threshold/max_rt) with fallback to in-code defaults when missing.
