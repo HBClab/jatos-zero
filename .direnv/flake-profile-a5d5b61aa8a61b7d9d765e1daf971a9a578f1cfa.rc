@@ -15,13 +15,13 @@ IN_NIX_SHELL='impure'
 export IN_NIX_SHELL
 LINENO='79'
 MACHTYPE='x86_64-pc-linux-gnu'
-NIX_BUILD_CORES='16'
+NIX_BUILD_CORES='22'
 export NIX_BUILD_CORES
 NIX_CFLAGS_COMPILE=' -frandom-seed=vk4m5lwwb4'
 export NIX_CFLAGS_COMPILE
 NIX_ENFORCE_NO_NATIVE='1'
 export NIX_ENFORCE_NO_NATIVE
-NIX_LDFLAGS='-rpath /home/zak/work/hbc/boost/boost-beh-zero/outputs/out/lib '
+NIX_LDFLAGS='-rpath /home/zak/work/hbc/jatos-zero/outputs/out/lib '
 export NIX_LDFLAGS
 NIX_NO_SELF_RPATH='1'
 NIX_STORE='/nix/store'
@@ -100,7 +100,7 @@ name='nix-shell-env'
 export name
 nativeBuildInputs='/nix/store/q8068yblbls2glzvvcc22vv99vpy06ga-python3-3.13.7-env /nix/store/q1zaii9cirbfpmwr7d86hpppql3kjcpf-git-2.51.0 /nix/store/a99hiwhamgzds70gxkfnb4cm8i926356-nodejs-22.19.0-dev'
 export nativeBuildInputs
-out='/home/zak/work/hbc/boost/boost-beh-zero/outputs/out'
+out='/home/zak/work/hbc/jatos-zero/outputs/out'
 export out
 outputBin='out'
 outputDev='out'
@@ -140,7 +140,7 @@ preConfigurePhases=' updateAutotoolsGnuConfigScriptsPhase'
 declare -a preFixupHooks=('_moveToShare' '_multioutDocs' '_multioutDevs' )
 preferLocalBuild='1'
 export preferLocalBuild
-prefix='/home/zak/work/hbc/boost/boost-beh-zero/outputs/out'
+prefix='/home/zak/work/hbc/jatos-zero/outputs/out'
 declare -a propagatedBuildDepFiles=('propagated-build-build-deps' 'propagated-native-build-inputs' 'propagated-build-target-deps' )
 propagatedBuildInputs=''
 export propagatedBuildInputs
