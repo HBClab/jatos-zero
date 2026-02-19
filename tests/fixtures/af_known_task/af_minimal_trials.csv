@@ -1,0 +1,6 @@
+subject_id,task,session,block,condition,response_time,correct
+9001,AF,1,test,congruent,540,1
+9001,AF,1,test,incongruent,710,0
+9001,AF,1,test,congruent,612,1
+9001,AF,1,test,incongruent,690,1
+9001,AF,1,test,congruent,575,1

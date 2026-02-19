@@ -167,31 +167,31 @@ This feature is complete when:
 ---
 
 ***Checkpoint 1: Test Harness Bootstrap***
-- [ ] Add base `pytest` structure under `tests/` (`e2e/`, `data_processing/`, `fixtures/`).
-- [ ] Add shared test config (`conftest.py`) for path setup and temporary artifact directories.
-- [ ] Add baseline lint/test local command documentation in project docs section for testing.
-- [ ] A test: `pytest` discovery smoke test confirms suite collection works from repo root.
+- [x] Add base `pytest` structure under `tests/` (`e2e/`, `data_processing/`, `fixtures/`).
+- [x] Add shared test config (`conftest.py`) for path setup and temporary artifact directories.
+- [x] Add baseline lint/test local command documentation in project docs section for testing.
+- [x] A test: `pytest` discovery smoke test confirms suite collection works from repo root.
 
 ***Checkpoint 2: Fixture and Helper Foundation***
-- [ ] Add committed synthetic fixtures for `AF` known-task flow under `tests/fixtures/af_known_task/`.
-- [ ] Add shared factories/assertion helpers in `tests/data_processing/helpers/`.
-- [ ] Ensure helper APIs are domain-agnostic and reusable by CC/MEM/PS/WL tests.
-- [ ] A test: helper/factory unit test validates fixture loading and normalized assertions.
+- [x] Add committed synthetic fixtures for `AF` known-task flow under `tests/fixtures/af_known_task/`.
+- [x] Add shared factories/assertion helpers in `tests/data_processing/helpers/`.
+- [x] Ensure helper APIs are domain-agnostic and reusable by CC/MEM/PS/WL tests.
+- [x] A test: helper/factory unit test validates fixture loading and normalized assertions.
 
 ***Checkpoint 3: AF End-to-End Path***
-- [ ] Implement `tests/e2e/test_known_task_happy_path.py` for `AF` orchestration path.
-- [ ] Assert expected saved artifacts for the `AF` run in isolated temp output paths.
-- [ ] Assert expected `meta/` artifact generation behavior for known-task processing.
-- [ ] A test: `AF` e2e passes fully offline with synthetic fixtures.
+- [x] Implement `tests/e2e/test_known_task_happy_path.py` for `AF` orchestration path.
+- [x] Assert expected saved artifacts for the `AF` run in isolated temp output paths.
+- [x] Assert expected `meta/` artifact generation behavior for known-task processing.
+- [x] A test: `AF` e2e passes fully offline with synthetic fixtures.
 
 ***Checkpoint 4: Unknown-Task No-Op Guardrail***
-- [ ] Add test coverage for unknown/new task input handling.
-- [ ] Assert complete ignore/no-op behavior (no QC, no plots, no meta writes, no saved outputs).
-- [ ] Ensure no exceptions are raised for ignored task paths unless explicitly intended by production behavior.
-- [ ] A test: unknown-task regression test verifies zero output mutation.
+- [x] Add test coverage for unknown/new task input handling.
+- [x] Assert complete ignore/no-op behavior (no QC, no plots, no meta writes, no saved outputs).
+- [x] Ensure no exceptions are raised for ignored task paths unless explicitly intended by production behavior.
+- [x] A test: unknown-task regression test verifies zero output mutation.
 
 ***Checkpoint 5: Domain Extensibility Skeleton + CI Gate***
-- [ ] Add starter domain test modules for `cc`, `mem`, `ps`, and `wl` that use shared helpers.
-- [ ] Add provider-agnostic CI workflow requirement implementation to run `flake8` + `pytest` on PR.
-- [ ] Document local equivalents (`flake8 code`, `pytest`, and e2e-targeted invocation).
-- [ ] A test: CI-equivalent local run succeeds with lint + full test suite including e2e.
+- [x] Add starter domain test modules for `cc`, `mem`, `ps`, and `wl` that use shared helpers.
+- [x] Add provider-agnostic CI workflow requirement implementation to run `flake8` + `pytest` on PR.
+- [x] Document local equivalents (`flake8 tests`, `pytest`, and e2e-targeted invocation).
+- [x] A test: CI-equivalent local run succeeds with lint + full test suite including e2e.
