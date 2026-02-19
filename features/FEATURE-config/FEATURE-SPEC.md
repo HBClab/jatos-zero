@@ -221,10 +221,10 @@ This feature is complete when:
 - [x] A test: add/extend `tests/e2e/` coverage verifying no plot artifacts by default and plot artifacts only when enabled.
 
 ***Checkpoint 6: Precedence Rules, Logging, and Docs***
-- [ ] Finalize config-source behavior so `config/pipeline.toml` is the only supported config path and missing file fails fast.
-- [ ] Enforce env-var policy: only already-existing env-backed values remain env-backed; new config keys cannot be env overrides.
-- [ ] Add startup/per-task logging for effective config (schema version, config path, configured tasks, resolved routing/params/columns, plot state).
-- [ ] A test: add `tests/config/test_source_and_logging.py` for single-source config behavior and key log assertions.
+- [x] Finalize config-source behavior so `config/pipeline.toml` is the only supported config path and missing file fails fast.
+- [x] Enforce env-var policy: only already-existing env-backed values remain env-backed; new config keys cannot be env overrides.
+- [x] Add startup/per-task logging for effective config (schema version, config path, configured tasks, resolved routing/params/columns, plot state).
+- [x] A test: add `tests/config/test_source_and_logging.py` for single-source config behavior and key log assertions.
 
 ***Checkpoint 7: Regression + CI Alignment***
 - [ ] Add/adjust e2e regression tests to confirm baseline-known-task behavior remains intact under baseline TOML.

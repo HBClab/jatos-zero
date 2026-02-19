@@ -8,7 +8,7 @@ from data_processing.utils import CONVERT_TO_CSV
 from data_processing.wl_qc import WL_QC
 from data_processing.plot_utils import CC_PLOTS, MEM_PLOTS, PS_PLOTS
 from data_processing.save_utils import SAVE_EVERYTHING
-from config.pipeline_config import load_pipeline_config
+from config.pipeline_config import load_runtime_pipeline_config as load_pipeline_config
 import atexit
 import os
 from termcolor import cprint
@@ -54,10 +54,7 @@ class Handler:
             task_name: task_config.task_ids
             for task_name, task_config in self.pipeline_config.pipeline.tasks.items()
         }
-        cprint(
-            f"Loaded pipeline config from {self.pipeline_config.config_path}",
-            "cyan",
-        )
+        self._log_startup_effective_config()
 
         self._meta_recreator = META_RECREATE()
         self._meta_rebuild_pending = False
@@ -67,6 +64,33 @@ class Handler:
     def configured_tasks(self) -> list[str]:
         configured = set(self.pipeline_config.pipeline.tasks.keys())
         return [task for task in self.task_order if task in configured]
+
+    def _log_startup_effective_config(self) -> None:
+        configured = self.configured_tasks()
+        configured_repr = ",".join(configured) if configured else "<none>"
+        cprint(
+            "Pipeline startup config: "
+            f"schema_version={self.pipeline_config.schema_version}, "
+            f"config_path={self.pipeline_config.config_path}, "
+            f"configured_tasks={configured_repr}, "
+            f"enable_plots={self.pipeline_config.pipeline.enable_plots}",
+            "cyan",
+        )
+
+    def _log_task_effective_config(self, task: str) -> None:
+        route_config = self.pipeline_config.pipeline.tasks[task]
+        qc = self.resolve_task_qc(task)
+        subject_column, session_column = self.resolve_task_columns(task)
+        cprint(
+            f"Task {task} config: "
+            f"domain={route_config.domain}, "
+            f"task_ids={route_config.task_ids}, "
+            f"qc.threshold={qc['threshold']}, "
+            f"qc.max_rt={qc['max_rt']}, "
+            f"subject_column={subject_column}, "
+            f"session_column={session_column}",
+            "cyan",
+        )
 
     def _validate_runtime_task(self, task: str) -> None:
         if task not in self.task_order:
@@ -204,6 +228,7 @@ class Handler:
 
     def pull(self, task):
         self._validate_runtime_task(task)
+        self._log_task_effective_config(task)
         pull_instance = Pull(
             self.IDs[task],
             tease="WEEEEEEEEEEEEEE",

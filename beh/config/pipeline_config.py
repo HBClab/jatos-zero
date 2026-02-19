@@ -263,3 +263,13 @@ def load_pipeline_config(
         ),
         config_path=resolved_path,
     )
+
+
+def load_runtime_pipeline_config(
+    known_tasks: Iterable[str] | None = None,
+) -> PipelineRuntimeConfig:
+    """Load pipeline config from the only supported runtime path."""
+    return load_pipeline_config(
+        config_path=DEFAULT_CONFIG_PATH,
+        known_tasks=known_tasks,
+    )
