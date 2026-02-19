@@ -178,6 +178,28 @@ task_ids = [123]
         load_pipeline_config(config_path, known_tasks={"AF"})
 
 
+def test_validation_rejects_more_than_six_task_ids(tmp_path: Path) -> None:
+    config_path = _write_config(
+        tmp_path,
+        """
+schema_version = 1
+
+[pipeline]
+enable_plots = false
+
+[pipeline.tasks.AF]
+domain = "cc"
+task_ids = [1, 2, 3, 4, 5, 6, 7]
+""".strip(),
+    )
+
+    with pytest.raises(
+        PipelineConfigValidationError,
+        match=r"pipeline\.tasks\.AF\.task_ids.*at most 6",
+    ):
+        load_pipeline_config(config_path, known_tasks={"AF"})
+
+
 def test_validation_rejects_attempt_to_configure_output_disables(tmp_path: Path) -> None:
     config_path = _write_config(
         tmp_path,

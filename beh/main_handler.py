@@ -565,15 +565,20 @@ class Handler:
         return categories, plots
 
 
-if __name__ == '__main__':
+def main(argv: list[str] | None = None) -> int:
     import sys
 
-    if len(sys.argv) < 2:
-        raise SystemExit("Usage: python beh/main_handler.py <TASK|all>")
+    cli_args = sys.argv if argv is None else argv
+    task = cli_args[1] if len(cli_args) >= 2 else "all"
 
     instance = Handler()
     try:
-        instance.run(sys.argv[1])
+        instance.run(task)
     except ValueError as err:
         cprint(str(err), "red")
-        raise SystemExit(1)
+        return 1
+    return 0
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())
