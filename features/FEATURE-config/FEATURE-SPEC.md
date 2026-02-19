@@ -215,10 +215,10 @@ This feature is complete when:
 - [x] A test: add `tests/config/test_resolution.py` asserting override behavior and fallback behavior for QC params and column names.
 
 ***Checkpoint 5: Plot Toggle and Output Constraints***
-- [ ] Add `pipeline.enable_plots` handling with default `false` and explicit `true` opt-in.
-- [ ] Gate plot generation calls in `beh/main_handler.py` by config flag while keeping saved data + meta behavior mandatory.
-- [ ] Validate that config cannot disable required outputs (data saves/meta rebuild).
-- [ ] A test: add/extend `tests/e2e/` coverage verifying no plot artifacts by default and plot artifacts only when enabled.
+- [x] Add `pipeline.enable_plots` handling with default `false` and explicit `true` opt-in.
+- [x] Gate plot generation calls in `beh/main_handler.py` by config flag while keeping saved data + meta behavior mandatory.
+- [x] Validate that config cannot disable required outputs (data saves/meta rebuild).
+- [x] A test: add/extend `tests/e2e/` coverage verifying no plot artifacts by default and plot artifacts only when enabled.
 
 ***Checkpoint 6: Precedence Rules, Logging, and Docs***
 - [ ] Finalize config-source behavior so `config/pipeline.toml` is the only supported config path and missing file fails fast.

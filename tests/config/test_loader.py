@@ -13,6 +13,7 @@ def test_loader_reads_default_pipeline_toml(repo_root: Path) -> None:
 
     assert config.config_path == expected_path
     assert config.schema_version == 1
+    assert config.pipeline.enable_plots is False
     assert "AF" in config.pipeline.tasks
     assert config.pipeline.tasks["AF"].task_ids == [945, 960, 990, 898, 919, 932]
 

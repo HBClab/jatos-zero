@@ -153,6 +153,12 @@ class Handler:
             self._meta_recreator.recreate(domain)
         self._meta_rebuild_pending = False
 
+    def _save_task_artifacts(self, task: str, categories, plots) -> None:
+        save_instance = SAVE_EVERYTHING()
+        save_instance.save_dfs(categories=categories, task=task)
+        if self.pipeline_config.pipeline.enable_plots:
+            save_instance.save_plots(plots=plots, task=task)
+
     @staticmethod
     def _get_value_with_fallback(
         df,
@@ -312,10 +318,7 @@ class Handler:
             categories.append([subject, normalized_category, normalized_df])
             plots.append([subject, plot])
 
-        # save artifacts (unchanged)
-        save_instance = SAVE_EVERYTHING()
-        save_instance.save_dfs(categories=categories, task=task)
-        save_instance.save_plots(plots=plots, task=task)
+        self._save_task_artifacts(task=task, categories=categories, plots=plots)
 
         return categories, plots
 
@@ -371,9 +374,7 @@ class Handler:
                 categories.append([subject, normalized_category, normalized_df])
                 plots.append([subject, plot])
 
-        save_instance = SAVE_EVERYTHING()
-        save_instance.save_dfs(categories=categories, task=task)
-        save_instance.save_plots(plots=plots, task=task)
+        self._save_task_artifacts(task=task, categories=categories, plots=plots)
 
         return categories, plots
 
@@ -476,9 +477,7 @@ class Handler:
                 normalized_category = self._normalize_category_value(category)
                 categories.append([subject, normalized_category, normalized_df])
                 plots.append([subject, plot])
-        save_instance = SAVE_EVERYTHING()
-        save_instance.save_dfs(categories=categories, task=task)
-        save_instance.save_plots(plots=plots, task=task)
+        self._save_task_artifacts(task=task, categories=categories, plots=plots)
 
         return categories, plots
 
@@ -536,9 +535,7 @@ class Handler:
         # maybe: materialize wl_master back to columns if you prefer
         # wl_master_out = self.wl_master.reset_index()
 
-        save_instance = SAVE_EVERYTHING()
-        save_instance.save_dfs(categories=categories, task=task)
-        save_instance.save_plots(plots=plots, task=task)
+        self._save_task_artifacts(task=task, categories=categories, plots=plots)
 
         return categories, plots
 
