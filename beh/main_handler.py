@@ -35,7 +35,7 @@ class Handler:
             "WL": [958, 972, 995, 910, 927, 944]
         }
 
-        self.pipeline_config = load_pipeline_config()
+        self.pipeline_config = load_pipeline_config(known_tasks=self.IDs.keys())
         cprint(
             f"Loaded pipeline config from {self.pipeline_config.config_path}",
             "cyan",
