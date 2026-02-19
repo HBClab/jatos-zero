@@ -80,14 +80,35 @@ class CC_PLOTS:
             palette={'Correct': 'green', 'Incorrect': 'red'}
         )
 
-        sns.boxplot(
-            x='condition',
-            y='response_time',
-            data=test,
-            whis=np.inf,
-            linewidth=0.5,
-            color='gray'
-        )
+        # Use Matplotlib directly here to avoid seaborn's PendingDeprecationWarning
+        # around the internal 'vert' argument on newer Matplotlib versions.
+        condition_order = [tick.get_text() for tick in rt_ax.get_xticklabels()]
+        if not condition_order:
+            condition_order = list(pd.unique(test['condition']))
+        rt_groups = [
+            test.loc[test['condition'] == condition, 'response_time'].dropna().values
+            for condition in condition_order
+        ]
+        valid_positions = []
+        valid_groups = []
+        for idx, group in enumerate(rt_groups):
+            if len(group) > 0:
+                valid_positions.append(idx)
+                valid_groups.append(group)
+
+        if valid_groups:
+            rt_ax.boxplot(
+                valid_groups,
+                positions=valid_positions,
+                widths=0.6,
+                whis=(0, 100),
+                showfliers=False,
+                patch_artist=True,
+                boxprops={"facecolor": "lightgray", "edgecolor": "gray", "linewidth": 0.5},
+                medianprops={"color": "black", "linewidth": 1.0},
+                whiskerprops={"color": "gray", "linewidth": 0.5},
+                capprops={"color": "gray", "linewidth": 0.5},
+            )
 
         # Calculate means
         means = test.groupby('condition')['response_time'].mean()

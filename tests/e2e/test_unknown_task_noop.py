@@ -10,18 +10,7 @@ from data_processing.utils import CONVERT_TO_CSV
 from main_handler import Handler
 
 
-@pytest.mark.xfail(
-    reason=(
-        "Checkpoint 4 guardrail: unknown tasks should be ignored "
-        "as full no-op. "
-        "Current main_handler routing is hardcoded and still triggers "
-        "meta rebuild in convert_to_csv. Future task-id/API mapping "
-        "changes should preserve canonical task behavior while unknown "
-        "labels remain ignored."
-    ),
-    strict=False,
-)
-def test_unknown_task_is_full_noop_expected_contract(
+def test_unknown_task_raises_before_side_effects(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
@@ -45,7 +34,11 @@ def test_unknown_task_is_full_noop_expected_contract(
         ]
     )
 
+    converter_called = {"called": False}
+    meta_called = {"called": False}
+
     def patched_convert_to_csv(self, txt_dfs):
+        converter_called["called"] = True
         return [af_like_df.copy()]
 
     monkeypatch.setattr(
@@ -59,11 +52,17 @@ def test_unknown_task_is_full_noop_expected_contract(
         data_root=data_root,
         meta_root=meta_root,
     )
+    monkeypatch.setattr(
+        handler,
+        "_run_meta_if_needed",
+        lambda force=False: meta_called.__setitem__("called", True),
+    )
 
     dummy_txt_frames = [pd.DataFrame([{"file_content": "[]"}])]
-    csv_dfs, result = handler.convert_to_csv(dummy_txt_frames, "AF_V2_UNKNOWN")
+    with pytest.raises(ValueError, match="Unknown task 'AF_V2_UNKNOWN'"):
+        handler.convert_to_csv(dummy_txt_frames, "AF_V2_UNKNOWN")
 
-    assert len(csv_dfs) == 1
-    assert result is None
+    assert converter_called["called"] is False
+    assert meta_called["called"] is False
     assert not any(data_root.rglob("*"))
     assert not any(meta_root.rglob("*"))
