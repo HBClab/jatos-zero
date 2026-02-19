@@ -2,6 +2,7 @@ import os
 import shutil
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
+
 class PathLogic:
 
     def __init__(self, system):
@@ -68,11 +69,11 @@ class PathLogic:
         return targets  # { 'sub-7057': '.../ObservationalStudy/.../sub-7057/beh', ... }
 
     # (kept for API compatibility)
-    #def build_out_paths(self, subs):
-    #   targets = self.build_target_paths(subs)
-    #   obs_list = [p for s, p in targets.items() if self._first_digit(s) == "7"]
-    #   int_list = [p for s, p in targets.items() if self._first_digit(s) in ("8","9")]
-    #   return {"obs": obs_list, "int": int_list}
+    # def build_out_paths(self, subs):
+    #     targets = self.build_target_paths(subs)
+    #     obs_list = [p for s, p in targets.items() if self._first_digit(s) == "7"]
+    #     int_list = [p for s, p in targets.items() if self._first_digit(s) in ("8", "9")]
+    #     return {"obs": obs_list, "int": int_list}
 
     # ---------- copy logic ----------
     @staticmethod
@@ -137,7 +138,7 @@ class PathLogic:
         return succeeded, failed
 
     # ---------- simple getter  ----------
-   #def list_subs(self):
-   #    # Build from the single pass index — avoids double traversal
-   #    src_index = self.index_subject_sources()
-   #    return list(src_index.keys())
+    # def list_subs(self):
+    #     # Build from the single pass index; avoids double traversal.
+    #     src_index = self.index_subject_sources()
+    #     return list(src_index.keys())

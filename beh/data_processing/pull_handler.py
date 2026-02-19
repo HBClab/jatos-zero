@@ -1,10 +1,7 @@
-from logging import raiseExceptions
-import os
 import sys
-import json
 import requests
 import pandas as pd
-from termcolor import colored, cprint
+from termcolor import cprint
 import zipfile
 import io
 from io import BytesIO
@@ -29,14 +26,14 @@ class Pull:
         from datetime import datetime, timedelta
 
         proxies = {
-        'http': f'http:zjgilliam:{self.tease}@proxy.divms.uiowa.edu:8888',
-        'https': f'http://zjgilliam:{self.tease}@proxy.divms.uiowa.edu:8888',
+            'http': f'http:zjgilliam:{self.tease}@proxy.divms.uiowa.edu:8888',
+            'https': f'http://zjgilliam:{self.tease}@proxy.divms.uiowa.edu:8888',
         }
 
         url = 'https://jatos.psychology.uiowa.edu/jatos/api/v1/results/metadata'
         headers = {
             'accept': 'application/json',
-            'Authorization': f"Bearer {self.token}" ,
+            'Authorization': f"Bearer {self.token}",
             'Content-Type': 'application/json',
         }
         data = {
@@ -77,7 +74,7 @@ class Pull:
             try:
                 # Make the API request
                 cprint("requesting data from Jatos...", 'green')
-                response = requests.post(url, headers=headers, json=data) #proxies=proxies) DONT USE THAT THANG
+                response = requests.post(url, headers=headers, json=data)  # proxies=proxies
                 response.raise_for_status()  # Raise HTTP errors if any
                 response_json = response.json()
 
@@ -98,8 +95,6 @@ class Pull:
             except KeyError as e:
                 cprint(f"Unexpected response format: Missing key {e}", 'red')
                 return []
-
-
 
     def return_data(self, study_result_ids):
         proxies = {
@@ -129,18 +124,15 @@ class Pull:
                 return []
         else:
             try:
-                response = requests.post(url, headers=headers, json=data) #proxies=proxies)
+                response = requests.post(url, headers=headers, json=data)  # proxies=proxies
                 response.raise_for_status()
             except requests.RequestException:
                 return []
 
             if not zipfile.is_zipfile(BytesIO(response.content)):
                 return []
-
-
         # Process the zip file
         return self._extract_txt_files(response.content, study_result_ids)
-
 
     def _extract_txt_files(self, zip_content, study_result_ids):
         data_frames = []
@@ -158,5 +150,3 @@ class Pull:
                             data_frames.append(df)
 
         return data_frames  # List of DataFrames
-
-

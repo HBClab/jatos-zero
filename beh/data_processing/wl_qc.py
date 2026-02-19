@@ -1,6 +1,7 @@
 import pandas as pd
 from data_processing.utils import WL_UTILS, DWL_UTILS
 
+
 class WL_QC:
 
     def __init__(self, WL=True):
@@ -28,7 +29,6 @@ class WL_QC:
         if (df_all['block'] == 'immediate').any():
             if df_all.loc[df_all['block'] == 'immediate', 'ratio'].iloc[0] < 0.3:
                 self.CATEGORY = 2
-
 
         return df_all, self.CATEGORY
 
@@ -69,13 +69,19 @@ class WL_QC:
         tmp['block_label'] = tmp['block'].map(_lbl)
 
         # 3) sum and reshape to one row with a fixed column order
-        wanted = ['learn_1','learn_2','learn_3','learn_4','learn_5','distraction','immediate']
-        wide = (tmp.groupby('block_label')['correct'].sum()
-                  .reindex(wanted, fill_value=0)
-                  .to_frame().T)  # one row
+        wanted = [
+            'learn_1', 'learn_2', 'learn_3', 'learn_4',
+            'learn_5', 'distraction', 'immediate',
+        ]
+        wide = (
+            tmp.groupby('block_label')['correct']
+            .sum()
+            .reindex(wanted, fill_value=0)
+            .to_frame()
+            .T
+        )  # one row
 
         return wide  # columns are the block names above, single row of counts
-
 
     @staticmethod
     def dwl_count_correct(df_all):

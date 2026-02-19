@@ -1,9 +1,9 @@
 import os
 import re
-import pandas as pd
 import matplotlib.pyplot as plt
 from termcolor import cprint
 from pathlib import Path
+
 
 class SAVE_EVERYTHING:
     def __init__(self):
