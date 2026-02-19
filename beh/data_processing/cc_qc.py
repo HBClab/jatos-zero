@@ -1,13 +1,8 @@
 from data_processing.utils import QC_UTILS
-import os
-import sys
-from termcolor import colored, cprint
 import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
 
-class CCqC():
+
+class CCqC:
 
     def __init__(self, task, MAXRT, RT_COLUMN_NAME, ACC_COLUMN_NAME, CORRECT_SYMBOL, INCORRECT_SYMBOL, COND_COLUMN_NAME):
 
@@ -64,7 +59,13 @@ class CCqC():
             raw, self.MAXRT, self.RT_COLUMN_NAME
         )
 
-        accuracy = QC_UTILS.get_acc_by_block_cond(raw, self.COND_COLUMN_NAME, self.ACC_COLUMN_NAME, self.CORRECT_SYMBOL, self.INCORRECT_SYMBOL)
+        accuracy = QC_UTILS.get_acc_by_block_cond(
+            raw,
+            self.COND_COLUMN_NAME,
+            self.ACC_COLUMN_NAME,
+            self.CORRECT_SYMBOL,
+            self.INCORRECT_SYMBOL,
+        )
         avg_acc = 0.0
         for condition, acc in accuracy.items():
             avg_acc += acc

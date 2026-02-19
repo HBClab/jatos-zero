@@ -3,14 +3,14 @@
 A modular rewrite of the BOOST behavioral quality-control (QC) pipeline. The repo pulls raw JATOS exports, normalizes them into tidy data frames, applies construct-specific QC, and persists both participant-level artifacts and aggregate dashboards for downstream analysts.
 
 ## Highlights
-- Single entrypoint (`code/main_handler.py`) that coordinates pulling raw studies, CSV conversion, QC, persistence, and plotting.
+- Single entrypoint (`beh/main_handler.py`) that coordinates pulling raw studies, CSV conversion, QC, persistence, and plotting.
 - Domain-specific QC modules for the core cognitive constructs: cognitive control (CC), psychomotor speed (PS), memory (MEM), and word learning (WL).
 - Automatic artifact management: raw outputs land under `data/`, aggregated summaries in `meta/`, and generated plots in per-subject folders (with exemplar group views retained in `group/plots/`).
 - Ready to automate: `python code/main_handler.py all` mirrors the GitHub Action and is safe to schedule.
 
 ## Repository Layout
 ```text
-code/
+beh/
   main_handler.py        # Orchestrates end-to-end QC for a task or the full battery
   data_processing/
     pull_handler.py      # Pulls fresh JATOS exports by study IDs
@@ -43,14 +43,14 @@ run.py                  # Flask placeholder (not yet active)
 5. **Persist** – `SAVE_EVERYTHING` stores per-participant CSVs and plots under `data/<study>/<site>/<subject>/<task>/`. Once the task artifacts are saved, `META_RECREATE` is invoked for every domain so the aggregate CSVs in `meta/` stay synchronized with the subject-level cache.
 
 ## Supported Tasks
-| Construct | Tasks | Notes |
-|-----------|-------|-------|
-| CC (Cognitive Control) | `AF`, `NF`, `ATS`, `NTS`, `NNB`, `VNB` | Shared QC thresholds at 50% accuracy, optional task-switching logic for ATS/NTS |
-| PS (Psychomotor Speed) | `PC`, `LC`, `DSST` | Separate RT limits for LC/PC vs DSST; exports accuracy and correct-count masters |
-| MEM (Face/Scene Memory) | `FN`, `SM` | Captures per-condition accuracy, mean RT, and counts into `mem_master.csv` |
-| WL (Word Learning + Delayed) | `WL`, `DWL` | Combines learning/distraction/immediate blocks with delayed recall; masters upsert rows per subject/session |
+| Construct                    | Tasks                                  | Notes                                                                                                       |
+| ---------------------------- | -------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| CC (Cognitive Control)       | `AF`, `NF`, `ATS`, `NTS`, `NNB`, `VNB` | Shared QC thresholds at 50% accuracy, optional task-switching logic for ATS/NTS                             |
+| PS (Psychomotor Speed)       | `PC`, `LC`, `DSST`                     | Separate RT limits for LC/PC vs DSST; exports accuracy and correct-count masters                            |
+| MEM (Face/Scene Memory)      | `FN`, `SM`                             | Captures per-condition accuracy, mean RT, and counts into `mem_master.csv`                                  |
+| WL (Word Learning + Delayed) | `WL`, `DWL`                            | Combines learning/distraction/immediate blocks with delayed recall; masters upsert rows per subject/session |
 
-To target a single task, run `python code/main_handler.py WL`. To mirror the nightly sweep, use `python code/main_handler.py all`.
+To target a single task, run `python beh/main_handler.py WL`. To mirror the nightly sweep, use `python beh/main_handler.py all`.
 
 ## Setup
 1. Create a virtual environment and install dependencies:
@@ -67,10 +67,10 @@ To target a single task, run `python code/main_handler.py WL`. To mirror the nig
 ## Running QC Locally
 ```bash
 # QC the full battery (mirrors CI)
-python code/main_handler.py all
+python beh/main_handler.py all
 
 # QC a single construct
-python code/main_handler.py AF
+python beh/main_handler.py AF
 ```
 
 Outputs land under `data/` using the subject -> task folder pattern enforced by `SAVE_EVERYTHING`. Every run also refreshes the aggregated CSVs in `meta/` via `META_RECREATE`:
@@ -84,16 +84,43 @@ Outputs land under `data/` using the subject -> task folder pattern enforced by 
 - Shared reference visuals live in `group/plots/` (e.g., `flanker.png`, `task_switching.png`) for quick distribution in slide decks.
 
 ## Transferring Data to the Server
-`code/transfer/path_logic.py` discovers local subject folders and mirrors them to `/mnt/lss/Projects/BOOST` (observational vs intervention sites routed automatically). Use `PathLogic.copy_subjects_to_server(max_workers=?, dry_run=True)` inside a Python shell to preview the copy plan before executing.
+`beh/transfer/path_logic.py` discovers local subject folders and mirrors them to `/mnt/lss/Projects/BOOST` (observational vs intervention sites routed automatically). Use `PathLogic.copy_subjects_to_server(max_workers=?, dry_run=True)` inside a Python shell to preview the copy plan before executing.
 
 ## Development Workflow
-- Lint with `python -m flake8 code` before committing.
+- Lint with `python -m flake8 tests` before committing.
+- Run `pytest --collect-only` from repo root as a quick smoke check for test discovery.
 - Run `pytest` (tests live under `tests/`) to cover threshold logic, expected artifact names, and any new utilities.
+- Run `pytest tests/e2e -q` to target only e2e coverage.
+- Run `bash scripts/ci_check.sh` to execute the same local checks used by CI.
 - Keep notebooks or ad-hoc experiments outside tracked directories, or convert them into reproducible scripts.
+
+## Testing Commands (Local)
+```bash
+# lint
+python -m flake8 tests
+
+# discovery smoke check
+pytest --collect-only
+
+# full local test run
+pytest
+
+# e2e-only run
+pytest tests/e2e -q
+
+# CI-equivalent local checks
+bash scripts/ci_check.sh
+```
+
+## Test Naming & Extension Pattern
+- Domain starter tests follow `tests/data_processing/<domain>/test_<domain>_starter.py` (for example: `cc`, `mem`, `ps`, `wl`).
+- New domain tests should use `test_<domain>_<behavior>.py` so discovery remains predictable.
+- Fixtures live under `tests/fixtures/` with task-specific folders (for example: `tests/fixtures/af_known_task/`).
+- Reuse shared builders/assertions from `tests/data_processing/helpers/` to avoid duplicating fixture shaping and dataframe checks.
 
 ## Extending the Pipeline
 1. Add the new task code and study IDs to `Handler.IDs`.
-2. Implement construct logic under `code/data_processing/` (reuse helpers in `utils.py` when possible).
+2. Implement construct logic under `beh/data_processing/` (reuse helpers in `utils.py` when possible).
 3. Register the new branch in `Handler.choose_construct()` and extend `META_RECREATE` if new aggregate metrics are required.
 4. Document the task behavior and update tests/fixtures to reflect the new data expectations.
 

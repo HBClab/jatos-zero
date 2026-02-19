@@ -1,9 +1,11 @@
-import os
 import json
 import pandas as pd
 import numpy as np
+from fuzzywuzzy import fuzz
+from fuzzywuzzy import process
 
 from termcolor import cprint
+
 
 class CONVERT_TO_CSV:
     def __init__(self, task, init_path='./data/raw'):
@@ -243,10 +245,8 @@ class QC_UTILS:
                 - Maximum count of consecutive trials reaching MAXRT.
                 - List of tuples indicating the column ranges of consecutive trials.
         """
-
-
         if rt_column_name not in df.columns:
-                raise ValueError(f"Column '{rt_column_name}' does not exist in the DataFrame.")
+            raise ValueError(f"Column '{rt_column_name}' does not exist in the DataFrame.")
         # Filter trials that reach MAXRT
         max_rt_trials = df[df[rt_column_name] >= max_rt]
         # Number of trials reaching MAXRT
@@ -275,7 +275,7 @@ class QC_UTILS:
         return num_trials_reaching_max_rt, max_consecutive, consecutive_ranges
 
     @staticmethod
-    def get_count_correct(df, block_cond_column_name, acc_column_name, correct_symbol): 
+    def get_count_correct(df, block_cond_column_name, acc_column_name, correct_symbol):
         """
         Calculate the count of correct responses by block or condition based on a given column.
         Args:
@@ -295,7 +295,6 @@ class QC_UTILS:
             correct_count = (block_data[acc_column_name] == correct_symbol).sum()
             correct_count_by_block_cond[block_cond] = correct_count
         return correct_count_by_block_cond
-
 
     @staticmethod
     def get_acc_by_block_cond(df, block_cond_column_name, acc_column_name, correct_symbol, incorrect_symbol, domain=None):
@@ -334,7 +333,6 @@ class QC_UTILS:
                 # Calculate accuracy as a percentage
                 accuracy_by_block_cond[block_cond] = (correct_count / total_responses) * 100
 
-
         return accuracy_by_block_cond
 
     @staticmethod
@@ -362,10 +360,6 @@ class QC_UTILS:
 
         return problematic_blocks
 
-
-import pandas as pd
-from fuzzywuzzy import fuzz
-from fuzzywuzzy import process
 
 class WL_UTILS:
     """
@@ -481,9 +475,18 @@ class WL_UTILS:
         Initialize the WL_UTILS class with a DataFrame.
         """
         self.CATEGORY = 1
-        self.listA = [['book', 'flower', 'train', 'rug', 'meadow', 'harp', 'salt', 'finger', 'apple', 'log', 'button', 'key', 'gold', 'rattle'],['bowl', 'dawn', 'judge', 'grant', 'insect', 'plane', 'county', 'pool', 'seed', 'sheep', 'meal', 'coat', 'bottle', 'peach', 'chair']]
-        self.listB = [['street', 'grass', 'door', 'arm', 'star', 'wife', 'window', 'city', 'pupil', 'cabin', 'lake', 'pipe', 'skin', 'fire', 'clock'],['baby', 'ocean', 'palace', 'lip', 'bar', 'dress', 'steam', 'coin', 'rock', 'army', 'building', 'friend', 'storm', 'village', 'cell']]
-        self.listC = [['tower', 'wheat', 'queen', 'sugar', 'home', 'boy', 'doctor', 'camp', 'flag', 'letter', 'corn', 'nail', 'cattle', 'shore', 'body'],['sky', 'dollar', 'valley', 'butter', 'hall', 'diamond', 'winter', 'mother', 'christmas', 'meat', 'forest', 'tool', 'plant', 'money', 'hotel']]
+        self.listA = [
+            ['book', 'flower', 'train', 'rug', 'meadow', 'harp', 'salt', 'finger', 'apple', 'log', 'button', 'key', 'gold', 'rattle'],
+            ['bowl', 'dawn', 'judge', 'grant', 'insect', 'plane', 'county', 'pool', 'seed', 'sheep', 'meal', 'coat', 'bottle', 'peach', 'chair'],
+        ]
+        self.listB = [
+            ['street', 'grass', 'door', 'arm', 'star', 'wife', 'window', 'city', 'pupil', 'cabin', 'lake', 'pipe', 'skin', 'fire', 'clock'],
+            ['baby', 'ocean', 'palace', 'lip', 'bar', 'dress', 'steam', 'coin', 'rock', 'army', 'building', 'friend', 'storm', 'village', 'cell'],
+        ]
+        self.listC = [
+            ['tower', 'wheat', 'queen', 'sugar', 'home', 'boy', 'doctor', 'camp', 'flag', 'letter', 'corn', 'nail', 'cattle', 'shore', 'body'],
+            ['sky', 'dollar', 'valley', 'butter', 'hall', 'diamond', 'winter', 'mother', 'christmas', 'meat', 'forest', 'tool', 'plant', 'money', 'hotel'],
+        ]
 
     def select_key(self, version):
         keys = {'A': self.listA, 'B': self.listB, 'C': self.listC}
@@ -494,7 +497,7 @@ class WL_UTILS:
     def filter_data(self, df):
         "Remove the first row"
         filtered = df.iloc[1:]
-        return filtered.reset_index(drop=True) #reset index to 0
+        return filtered.reset_index(drop=True)  # reset index to 0
 
     @staticmethod
     def find_word_ranges(data):
@@ -579,14 +582,13 @@ class WL_UTILS:
         df_immed['block'] = 'immediate'
 
         # Add explicit condition column so both things are available downstream
-        df_dist['condition']  = 'distraction'
+        df_dist['condition'] = 'distraction'
         df_immed['condition'] = 'immediate'
         df_learn['condition'] = 'learn'
 
         df_all = pd.concat([df_dist, df_immed, df_learn], ignore_index=True)
         df_all['trial_index'] = df_all.index
         return df_all, self.CATEGORY
-
 
 
 class DWL_UTILS:
@@ -713,7 +715,7 @@ class DWL_UTILS:
             self.CATEGORY = 3
             # You can return an empty DataFrame or handle differently
             df_all = pd.DataFrame(columns=[
-                'word','best_match','ratio','backspace','repeat','correct','block','trial_index'
+                'word', 'best_match', 'ratio', 'backspace', 'repeat', 'correct', 'block', 'trial_index'
             ])
             return df_all, self.CATEGORY
 

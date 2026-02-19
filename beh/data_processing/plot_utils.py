@@ -1,11 +1,10 @@
-import os
 import pandas as pd
-import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
-import matplotlib.patches as mpatches
-from math import pi
 import matplotlib
+import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
+
 
 class CC_PLOTS:
     matplotlib.use('Agg')
@@ -13,10 +12,7 @@ class CC_PLOTS:
     def __init__(self) -> None:
         pass
 
-
     def af_nf_plot(self, df):
-
-
         """
         Generates two plots: a count plot of correct responses by condition and a response time plot by condition.
 
@@ -113,7 +109,7 @@ class CC_PLOTS:
 
     def ats_nts_plot(self, df):
         def filter(df):
-            df = df[df['block']=='test'].reset_index(drop=True)
+            df = df[df['block'] == 'test'].reset_index(drop=True)
             return df
 
         def _percent_acc(df):
@@ -127,9 +123,8 @@ class CC_PLOTS:
             plt.xlabel('Condition')
             plt.ylabel('Percent Correct')
             plt.tight_layout()
-
-
             return ax1
+
         def _rt(df):
             # Map the 'correct' column to more descriptive labels
             df['correct_label'] = df['correct'].map({0: 'Incorrect', 1: 'Correct'})
@@ -191,9 +186,7 @@ class CC_PLOTS:
 
         return acc, rt
 
-
-
-    def nnb_vnb_plot(self,df):
+    def nnb_vnb_plot(self, df):
         """
         Generates two plots from the given CSV file.
 
@@ -241,8 +234,6 @@ class CC_PLOTS:
         rt = ax2
         # Return the Axes objects for both plots
         return acc, rt
-
-
 
 
 class PS_PLOTS:
@@ -345,7 +336,6 @@ class PS_PLOTS:
 
         return count_ax
 
-
     def dsst_plot(self, df):
         """
         Generates plots for DSST (Digit Symbol Substitution Test) data.
@@ -356,10 +346,7 @@ class PS_PLOTS:
         Returns:
             matplotlib.axes.Axes: The response time plot with percentage correct.
         """
-        test = df[df['condition'] =='test']
-        total = test['acc_sum'].max() + 1
-        total_correct = test['correct'].sum()
-        percent_correct = (total_correct / total) * 100  # Convert to percentage
+        test = df[df['condition'] == 'test']
 
         # Response time plot
         test['response_time'] = test['countdown'].diff(-1).abs()
@@ -378,7 +365,7 @@ class PS_PLOTS:
         plt.title('Response Time by Correctness')
         plt.xlabel('Correctness')
         plt.ylabel('Response Time (ms)')
-        
+
         # Generate count plot
         plt.figure(figsize=(10, 6))
         count_ax = sns.countplot(x='condition', hue='correct', data=test)
@@ -398,7 +385,6 @@ class PS_PLOTS:
         # Adjust y-axis limit
         max_height = max([p.get_height() for p in count_ax.patches if p.get_height() > 0])
         count_ax.set_ylim(0, max_height * 1.15)
-
 
         plt.tight_layout()
         return resp_time_ax, count_ax
@@ -530,7 +516,6 @@ class MEM_PLOTS:
         sns.boxplot(
             x='target_congruent', y='response_time', data=test, whis=np.inf, linewidth=0.5, color='gray'
         )
-        #plt.xlabel
         plt.legend(title='Correctness', loc='upper left', bbox_to_anchor=(1.05, 1))
         plt.title('Response Time by Target Congruence')
         plt.tight_layout()
@@ -602,56 +587,3 @@ class MEM_PLOTS:
         plt.tight_layout()
 
         return dwl_ax
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

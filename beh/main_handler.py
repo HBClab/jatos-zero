@@ -100,10 +100,7 @@ class Handler:
         self._run_meta_if_needed(force=True)
         return csv_dfs, result
 
-
-
     def choose_construct(self, csv_dfs, task):
-
         if task in ['NF', 'AF', 'NTS', 'ATS', 'NNB', 'VNB']:
             return self.qc_cc_dfs(csv_dfs, task)
         elif task in ['FN', 'SM']:
@@ -131,7 +128,6 @@ class Handler:
             INCORRECT_SYMBOL=0,
             COND_COLUMN_NAME=cond_col,
         )
-
 
         for df in dfs:
             subject = df["subject_id"].iloc[0]
@@ -183,7 +179,6 @@ class Handler:
 
         return categories, plots
 
-
     def qc_ps_dfs(self, dfs, task):
         categories, plots = [], []
         plot_instance = PS_PLOTS()
@@ -215,7 +210,6 @@ class Handler:
         save_instance.save_plots(plots=plots, task=task)
 
         return categories, plots
-
 
     def qc_mem_dfs(self, dfs, task):
         plot_instance = MEM_PLOTS()
@@ -312,7 +306,6 @@ class Handler:
 
         return categories, plots
 
-
     def qc_wl_dfs(self, dfs, task):
         categories, plots = [], []
         plot_instance = MEM_PLOTS()
@@ -321,8 +314,6 @@ class Handler:
             for df in dfs:
                 subject = df['subject_id'].iloc[1]
                 version = df['task_vers'].iloc[1]
-                session = (df['session_number'].iloc[1] if 'session_number' in df.columns
-                           else (df['session'].iloc[1] if 'session' in df.columns else None))
 
                 wl_instance = WL_QC()
                 df_all, category = wl_instance.wl_qc(df, version)
@@ -336,8 +327,6 @@ class Handler:
             for df in dfs:
                 subject = df['subject_id'].iloc[1]
                 version = df['task_vers'].iloc[1]
-                session = (df['session_number'].iloc[1] if 'session_number' in df.columns
-                           else (df['session'].iloc[1] if 'session' in df.columns else None))
 
                 dwl_instance = WL_QC()
                 df_all, category = dwl_instance.dwl_qc(df, version)
@@ -355,8 +344,9 @@ class Handler:
         save_instance.save_plots(plots=plots, task=task)
 
         return categories, plots
+
+
 if __name__ == '__main__':
-    import os
     import sys
 
     task_list = ['AF', 'NF', 'NTS', 'ATS', 'NNB', 'VNB', 'WL', 'DWL', 'FN', 'SM', 'PC', 'LC', 'DSST']
