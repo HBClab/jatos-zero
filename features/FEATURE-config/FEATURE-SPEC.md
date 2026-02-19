@@ -62,7 +62,7 @@ Acceptance criteria:
 - Validation errors include the failing key path.
 
 ### FR-003: Known-task allowlist enforcement
-Task execution SHALL be restricted to the authoritative known-task list from `Handler.IDs`.
+Task execution SHALL be restricted to the authoritative known-task list in `beh/main_handler.py` and configured task subset in `config/pipeline.toml`.
 
 Acceptance criteria:
 - A task not in the authoritative list raises an explicit error and exits non-zero.
@@ -70,12 +70,14 @@ Acceptance criteria:
 - Known-task processing behavior remains unchanged when using baseline config values.
 
 ### FR-004: Domain/task routing configuration
-The config SHALL support explicit domain routing for a configurable subset of known tasks only.
+The config SHALL support explicit domain routing and task-id mapping for a configurable subset of known tasks only.
 
 Acceptance criteria:
 - Config may include any subset of known tasks.
 - Omitted known tasks are not run.
 - Config maps each configured task to one of `cc`, `mem`, `ps`, `wl`.
+- Config declares `task_ids` (list of integers) for each configured task.
+- Runtime pull IDs are sourced from `pipeline.tasks.<TASK>.task_ids` rather than hardcoded IDs in `beh/main_handler.py`.
 - The mapping must match implemented handlers in `beh/main_handler.py`.
 - Config cannot define mappings for unknown tasks.
 
@@ -149,6 +151,7 @@ session = "session_number"
 
 [pipeline.tasks.AF]
 domain = "cc"
+task_ids = [945, 960, 990, 898, 919, 932]
 
 [pipeline.tasks.AF.qc]
 threshold = 0.5
@@ -156,6 +159,7 @@ max_rt = 1800
 
 [pipeline.tasks.FN]
 domain = "mem"
+task_ids = [950, 964, 987, 902, 923, 936]
 
 [pipeline.tasks.FN.qc]
 threshold = 0.5
@@ -165,10 +169,12 @@ session_column = "session_number"
 
 [pipeline.tasks.WL]
 domain = "wl"
+task_ids = [958, 972, 995, 910, 927, 944]
 ```
 
 Notes:
 - The tasks table is subset-based; omitted known tasks are intentionally not run.
+- `task_ids` are required per configured task and are the runtime source of pull IDs.
 - Task-level `subject_column`/`session_column` fallback order is: task override -> pipeline defaults -> in-code defaults.
 
 ## Definition of Done
@@ -192,19 +198,21 @@ This feature is complete when:
 - [x] Implement fail-fast validation for required keys and types (`schema_version`, `pipeline`, task/domain blocks).
 - [x] Enforce hard errors on unknown keys at any nesting level with key-path details in error messages.
 - [x] Enforce domain mapping validity (`cc`, `mem`, `ps`, `wl`) and reject unknown task definitions in config.
+- [x] Enforce `task_ids` presence and type validation (non-empty integer list per configured task).
 - [x] A test: add `tests/config/test_validation.py` cases for missing keys, bad types, and unknown-key failures.
 
 ***Checkpoint 3: Task Selection and Unknown-Task Runtime Errors***
 - [x] Update orchestration in `beh/main_handler.py` so only configured known-task subset is runnable.
 - [x] Make omitted known tasks not run when executing `all`.
 - [x] Make unknown runtime task requests fail explicitly (non-zero/error path) before any side effects.
+- [x] Remove hardcoded task ID values from `beh/main_handler.py` and source pull IDs from TOML `task_ids`.
 - [x] A test: add/extend `tests/e2e/` coverage asserting omitted tasks are skipped and unknown tasks raise with no outputs written.
 
 ***Checkpoint 4: QC Param + Column Fallback Resolution***
-- [ ] Add resolver logic for per-task QC overrides (threshold/max_rt) with fallback to in-code defaults when missing.
-- [ ] Add resolver logic for `subject_column` and `session_column` with fallback order: task override -> pipeline defaults -> code defaults.
-- [ ] Thread resolved values into existing QC entry points in `beh/main_handler.py` while preserving baseline behavior when config is sparse.
-- [ ] A test: add `tests/config/test_resolution.py` asserting override behavior and fallback behavior for QC params and column names.
+- [x] Add resolver logic for per-task QC overrides (threshold/max_rt) with fallback to in-code defaults when missing.
+- [x] Add resolver logic for `subject_column` and `session_column` with fallback order: task override -> pipeline defaults -> code defaults.
+- [x] Thread resolved values into existing QC entry points in `beh/main_handler.py` while preserving baseline behavior when config is sparse.
+- [x] A test: add `tests/config/test_resolution.py` asserting override behavior and fallback behavior for QC params and column names.
 
 ***Checkpoint 5: Plot Toggle and Output Constraints***
 - [ ] Add `pipeline.enable_plots` handling with default `false` and explicit `true` opt-in.

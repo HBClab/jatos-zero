@@ -17,6 +17,21 @@ warnings.filterwarnings("ignore")
 
 
 class Handler:
+    CODE_DEFAULT_SUBJECT_COLUMN = "subject_id"
+    CODE_DEFAULT_SESSION_COLUMN = "session_number"
+    CODE_DEFAULT_QC: dict[str, dict[str, float | int]] = {
+        "AF": {"threshold": 0.5, "max_rt": 1800},
+        "NF": {"threshold": 0.5, "max_rt": 1800},
+        "NTS": {"threshold": 0.5, "max_rt": 1800},
+        "ATS": {"threshold": 0.5, "max_rt": 1800},
+        "NNB": {"threshold": 0.5, "max_rt": 1800},
+        "VNB": {"threshold": 0.5, "max_rt": 1800},
+        "FN": {"threshold": 0.5, "max_rt": 4000},
+        "SM": {"threshold": 0.5, "max_rt": 2000},
+        "PC": {"threshold": 0.6, "max_rt": 30000},
+        "LC": {"threshold": 0.6, "max_rt": 30000},
+        "DSST": {"threshold": 0.6, "max_rt": 125},
+    }
 
     def __init__(self):
         self.task_order = [
@@ -69,6 +84,34 @@ class Handler:
             return [self.pull(configured_task) for configured_task in self.configured_tasks()]
         return self.pull(task)
 
+    def resolve_task_qc(self, task: str) -> dict[str, float | int | None]:
+        self._validate_runtime_task(task)
+        task_cfg = self.pipeline_config.pipeline.tasks[task].qc
+        code_defaults = self.CODE_DEFAULT_QC.get(task, {})
+        threshold = task_cfg.threshold
+        if threshold is None:
+            threshold = code_defaults.get("threshold")
+        max_rt = task_cfg.max_rt
+        if max_rt is None:
+            max_rt = code_defaults.get("max_rt")
+        return {"threshold": threshold, "max_rt": max_rt}
+
+    def resolve_task_columns(self, task: str) -> tuple[str, str]:
+        self._validate_runtime_task(task)
+        task_cfg = self.pipeline_config.pipeline.tasks[task].qc
+        default_columns = self.pipeline_config.pipeline.defaults.columns
+        subject_column = (
+            task_cfg.subject_column
+            or default_columns.subject
+            or self.CODE_DEFAULT_SUBJECT_COLUMN
+        )
+        session_column = (
+            task_cfg.session_column
+            or default_columns.session
+            or self.CODE_DEFAULT_SESSION_COLUMN
+        )
+        return subject_column, session_column
+
     @staticmethod
     def _normalize_category_value(category):
         """Coerce QC categories to plain scalars so filenames remain clean."""
@@ -110,6 +153,49 @@ class Handler:
             self._meta_recreator.recreate(domain)
         self._meta_rebuild_pending = False
 
+    @staticmethod
+    def _get_value_with_fallback(
+        df,
+        preferred_column: str,
+        fallback_columns: list[str],
+        preferred_index: int = 0,
+    ):
+        columns = [preferred_column] + [
+            column for column in fallback_columns if column != preferred_column
+        ]
+        for column in columns:
+            if column not in df.columns:
+                continue
+            series = df[column]
+            if series.empty:
+                return None
+            if len(series) > preferred_index:
+                return series.iloc[preferred_index]
+            return series.iloc[0]
+        return None
+
+    @classmethod
+    def _apply_runtime_column_aliases(
+        cls,
+        df,
+        subject_column: str,
+        session_column: str,
+    ):
+        normalized = df
+        if (
+            subject_column in normalized.columns
+            and cls.CODE_DEFAULT_SUBJECT_COLUMN not in normalized.columns
+        ):
+            normalized = normalized.copy()
+            normalized[cls.CODE_DEFAULT_SUBJECT_COLUMN] = normalized[subject_column]
+        if (
+            session_column in normalized.columns
+            and cls.CODE_DEFAULT_SESSION_COLUMN not in normalized.columns
+        ):
+            normalized = normalized.copy()
+            normalized[cls.CODE_DEFAULT_SESSION_COLUMN] = normalized[session_column]
+        return normalized
+
     def pull(self, task):
         self._validate_runtime_task(task)
         pull_instance = Pull(
@@ -147,13 +233,15 @@ class Handler:
     def qc_cc_dfs(self, dfs, task):
         categories, plots = [], []
         plot_instance = CC_PLOTS()
+        qc_params = self.resolve_task_qc(task)
+        subject_column, session_column = self.resolve_task_columns(task)
         # pick the grouping column for accuracy/RT
         cond_col = "condition" if task in ["AF", "NF", "NNB", "VNB"] else "block_cond"
 
         # Configure QC with task-specific column names/symbols
         qc_instance = CCqC(
             task,
-            MAXRT=1800,
+            MAXRT=qc_params["max_rt"],
             RT_COLUMN_NAME="response_time",
             ACC_COLUMN_NAME="correct",
             CORRECT_SYMBOL=1,
@@ -162,26 +250,46 @@ class Handler:
         )
 
         for df in dfs:
-            subject = df["subject_id"].iloc[0]
-            if "session" in df.columns:
-                session = df["session"].iloc[0]
-            elif "session_number" in df.columns:
-                session = df["session_number"].iloc[0]
-            else:
-                session = None
+            normalized_df = self._apply_runtime_column_aliases(
+                df,
+                subject_column=subject_column,
+                session_column=session_column,
+            )
+            subject = self._get_value_with_fallback(
+                normalized_df,
+                preferred_column=subject_column,
+                fallback_columns=[self.CODE_DEFAULT_SUBJECT_COLUMN],
+                preferred_index=0,
+            )
+            session = self._get_value_with_fallback(
+                normalized_df,
+                preferred_column=session_column,
+                fallback_columns=[self.CODE_DEFAULT_SESSION_COLUMN, "session"],
+                preferred_index=0,
+            )
 
             acc_by: dict = {}
             try:
                 # --- Run QC + plots (kept as you had it) ---
                 if task in ["AF", "NF"]:
-                    category, acc_by = qc_instance.cc_qc(df, threshold=0.5)
-                    plot = plot_instance.af_nf_plot(df)
+                    category, acc_by = qc_instance.cc_qc(
+                        normalized_df,
+                        threshold=qc_params["threshold"],
+                    )
+                    plot = plot_instance.af_nf_plot(normalized_df)
                 elif task in ["NNB", "VNB"]:
-                    category, acc_by = qc_instance.cc_qc(df, threshold=0.5)
-                    plot = plot_instance.nnb_vnb_plot(df)
+                    category, acc_by = qc_instance.cc_qc(
+                        normalized_df,
+                        threshold=qc_params["threshold"],
+                    )
+                    plot = plot_instance.nnb_vnb_plot(normalized_df)
                 else:
-                    category, acc_by = qc_instance.cc_qc(df, threshold=0.5, TS=True)
-                    plot = plot_instance.ats_nts_plot(df)
+                    category, acc_by = qc_instance.cc_qc(
+                        normalized_df,
+                        threshold=qc_params["threshold"],
+                        TS=True,
+                    )
+                    plot = plot_instance.ats_nts_plot(normalized_df)
             except ValueError as err:
                 message = str(err)
                 if "No 'test' block rows available for plotting" in message:
@@ -201,7 +309,7 @@ class Handler:
                 raise
 
             normalized_category = self._normalize_category_value(category)
-            categories.append([subject, normalized_category, df])
+            categories.append([subject, normalized_category, normalized_df])
             plots.append([subject, plot])
 
         # save artifacts (unchanged)
@@ -214,27 +322,53 @@ class Handler:
     def qc_ps_dfs(self, dfs, task):
         categories, plots = [], []
         plot_instance = PS_PLOTS()
+        qc_params = self.resolve_task_qc(task)
+        subject_column, session_column = self.resolve_task_columns(task)
         if task in ['PC', 'LC']:
-            ps_instance = PS_QC('response_time', 'correct', 1, 0, 'block_c', 30000)
+            ps_instance = PS_QC('response_time', 'correct', 1, 0, 'block_c', qc_params["max_rt"])
             for df in dfs:
-                subject = df['subject_id'][1]
-                category, _ = ps_instance.ps_qc(df, threshold=0.6,)
+                normalized_df = self._apply_runtime_column_aliases(
+                    df,
+                    subject_column=subject_column,
+                    session_column=session_column,
+                )
+                subject = self._get_value_with_fallback(
+                    normalized_df,
+                    preferred_column=subject_column,
+                    fallback_columns=[self.CODE_DEFAULT_SUBJECT_COLUMN],
+                    preferred_index=1,
+                )
+                category, _ = ps_instance.ps_qc(normalized_df, threshold=qc_params["threshold"])
                 if task == 'PC':
-                    plot = plot_instance.lc_plot(df)
+                    plot = plot_instance.lc_plot(normalized_df)
                 elif task == 'LC':
-                    plot = plot_instance.lc_plot(df)
+                    plot = plot_instance.lc_plot(normalized_df)
                 normalized_category = self._normalize_category_value(category)
-                categories.append([subject, normalized_category, df])
+                categories.append([subject, normalized_category, normalized_df])
                 plots.append([subject, plot])
 
         else:
-            ps_instance = PS_QC('block_dur', 'correct', 1, 0, 'block_c', 125)
+            ps_instance = PS_QC('block_dur', 'correct', 1, 0, 'block_c', qc_params["max_rt"])
             for df in dfs:
-                subject = df['subject_id'][1]
-                category, _ = ps_instance.ps_qc(df, threshold=0.6, DSST=True)
-                plot = plot_instance.dsst_plot(df)
+                normalized_df = self._apply_runtime_column_aliases(
+                    df,
+                    subject_column=subject_column,
+                    session_column=session_column,
+                )
+                subject = self._get_value_with_fallback(
+                    normalized_df,
+                    preferred_column=subject_column,
+                    fallback_columns=[self.CODE_DEFAULT_SUBJECT_COLUMN],
+                    preferred_index=1,
+                )
+                category, _ = ps_instance.ps_qc(
+                    normalized_df,
+                    threshold=qc_params["threshold"],
+                    DSST=True,
+                )
+                plot = plot_instance.dsst_plot(normalized_df)
                 normalized_category = self._normalize_category_value(category)
-                categories.append([subject, normalized_category, df])
+                categories.append([subject, normalized_category, normalized_df])
                 plots.append([subject, plot])
 
         save_instance = SAVE_EVERYTHING()
@@ -246,29 +380,35 @@ class Handler:
     def qc_mem_dfs(self, dfs, task):
         plot_instance = MEM_PLOTS()
         categories, plots = [], []
+        qc_params = self.resolve_task_qc(task)
+        subject_column, session_column = self.resolve_task_columns(task)
         if task in ['FN']:
-            mem_instance = MEM_QC('response_time', 'correct', 1, 0, 'block_c', 4000)
+            mem_instance = MEM_QC('response_time', 'correct', 1, 0, 'block_c', qc_params["max_rt"])
             for df in dfs:
-                subject_series = df.get('subject_id')
-                subject = (
-                    subject_series.iloc[1]
-                    if subject_series is not None and len(subject_series) > 1
-                    else (subject_series.iloc[0] if subject_series is not None and not subject_series.empty else "<unknown>")
+                normalized_df = self._apply_runtime_column_aliases(
+                    df,
+                    subject_column=subject_column,
+                    session_column=session_column,
                 )
-                if 'session_number' in df.columns and len(df['session_number']) > 1:
-                    session = df['session_number'].iloc[1]
-                elif 'session' in df.columns and len(df['session']) > 1:
-                    session = df['session'].iloc[1]
-                elif 'session_number' in df.columns and not df['session_number'].empty:
-                    session = df['session_number'].iloc[0]
-                elif 'session' in df.columns and not df['session'].empty:
-                    session = df['session'].iloc[0]
-                else:
-                    session = None
+                subject = self._get_value_with_fallback(
+                    normalized_df,
+                    preferred_column=subject_column,
+                    fallback_columns=[self.CODE_DEFAULT_SUBJECT_COLUMN],
+                    preferred_index=1,
+                )
+                session = self._get_value_with_fallback(
+                    normalized_df,
+                    preferred_column=session_column,
+                    fallback_columns=[self.CODE_DEFAULT_SESSION_COLUMN, "session"],
+                    preferred_index=1,
+                )
 
                 try:
-                    category, _ = mem_instance.fn_sm_qc(df, threshold=0.5)
-                    plot = plot_instance.fn_plot(df)
+                    category, _ = mem_instance.fn_sm_qc(
+                        normalized_df,
+                        threshold=qc_params["threshold"],
+                    )
+                    plot = plot_instance.fn_plot(normalized_df)
                 except ValueError as err:
                     message = str(err)
                     if "No 'test' block rows available for MEM plotting" in message:
@@ -287,31 +427,35 @@ class Handler:
                         continue
                     raise
                 normalized_category = self._normalize_category_value(category)
-                categories.append([subject, normalized_category, df])
+                categories.append([subject, normalized_category, normalized_df])
                 plots.append([subject, plot])
         elif task in ['SM']:
-            mem_instance = MEM_QC('response_time', 'correct', 1, 0, 'block_c', 2000)
+            mem_instance = MEM_QC('response_time', 'correct', 1, 0, 'block_c', qc_params["max_rt"])
             for df in dfs:
-                subject_series = df.get('subject_id')
-                subject = (
-                    subject_series.iloc[1]
-                    if subject_series is not None and len(subject_series) > 1
-                    else (subject_series.iloc[0] if subject_series is not None and not subject_series.empty else "<unknown>")
+                normalized_df = self._apply_runtime_column_aliases(
+                    df,
+                    subject_column=subject_column,
+                    session_column=session_column,
                 )
-                if 'session_number' in df.columns and len(df['session_number']) > 1:
-                    session = df['session_number'].iloc[1]
-                elif 'session' in df.columns and len(df['session']) > 1:
-                    session = df['session'].iloc[1]
-                elif 'session_number' in df.columns and not df['session_number'].empty:
-                    session = df['session_number'].iloc[0]
-                elif 'session' in df.columns and not df['session'].empty:
-                    session = df['session'].iloc[0]
-                else:
-                    session = None
+                subject = self._get_value_with_fallback(
+                    normalized_df,
+                    preferred_column=subject_column,
+                    fallback_columns=[self.CODE_DEFAULT_SUBJECT_COLUMN],
+                    preferred_index=1,
+                )
+                session = self._get_value_with_fallback(
+                    normalized_df,
+                    preferred_column=session_column,
+                    fallback_columns=[self.CODE_DEFAULT_SESSION_COLUMN, "session"],
+                    preferred_index=1,
+                )
 
                 try:
-                    category, _ = mem_instance.fn_sm_qc(df, threshold=0.5)
-                    plot = plot_instance.sm_plot(df)
+                    category, _ = mem_instance.fn_sm_qc(
+                        normalized_df,
+                        threshold=qc_params["threshold"],
+                    )
+                    plot = plot_instance.sm_plot(normalized_df)
                 except ValueError as err:
                     message = str(err)
                     if "No 'test' block rows available for MEM plotting" in message:
@@ -330,7 +474,7 @@ class Handler:
                         continue
                     raise
                 normalized_category = self._normalize_category_value(category)
-                categories.append([subject, normalized_category, df])
+                categories.append([subject, normalized_category, normalized_df])
                 plots.append([subject, plot])
         save_instance = SAVE_EVERYTHING()
         save_instance.save_dfs(categories=categories, task=task)
@@ -341,31 +485,52 @@ class Handler:
     def qc_wl_dfs(self, dfs, task):
         categories, plots = [], []
         plot_instance = MEM_PLOTS()
+        subject_column, session_column = self.resolve_task_columns(task)
 
         if task == 'WL':
             for df in dfs:
-                subject = df['subject_id'].iloc[1]
-                version = df['task_vers'].iloc[1]
+                normalized_df = self._apply_runtime_column_aliases(
+                    df,
+                    subject_column=subject_column,
+                    session_column=session_column,
+                )
+                subject = self._get_value_with_fallback(
+                    normalized_df,
+                    preferred_column=subject_column,
+                    fallback_columns=[self.CODE_DEFAULT_SUBJECT_COLUMN],
+                    preferred_index=1,
+                )
+                version = normalized_df['task_vers'].iloc[1]
 
                 wl_instance = WL_QC()
-                df_all, category = wl_instance.wl_qc(df, version)
+                df_all, category = wl_instance.wl_qc(normalized_df, version)
                 plot = plot_instance.wl_plot(df_all)
 
                 normalized_category = self._normalize_category_value(category)
-                categories.append([subject, normalized_category, df])
+                categories.append([subject, normalized_category, normalized_df])
                 plots.append([subject, plot])
 
         elif task == 'DWL':
             for df in dfs:
-                subject = df['subject_id'].iloc[1]
-                version = df['task_vers'].iloc[1]
+                normalized_df = self._apply_runtime_column_aliases(
+                    df,
+                    subject_column=subject_column,
+                    session_column=session_column,
+                )
+                subject = self._get_value_with_fallback(
+                    normalized_df,
+                    preferred_column=subject_column,
+                    fallback_columns=[self.CODE_DEFAULT_SUBJECT_COLUMN],
+                    preferred_index=1,
+                )
+                version = normalized_df['task_vers'].iloc[1]
 
                 dwl_instance = WL_QC()
-                df_all, category = dwl_instance.dwl_qc(df, version)
+                df_all, category = dwl_instance.dwl_qc(normalized_df, version)
                 plot = plot_instance.dwl_plot(df_all)
 
                 normalized_category = self._normalize_category_value(category)
-                categories.append([subject, normalized_category, df])
+                categories.append([subject, normalized_category, normalized_df])
                 plots.append([subject, plot])
 
         # maybe: materialize wl_master back to columns if you prefer
