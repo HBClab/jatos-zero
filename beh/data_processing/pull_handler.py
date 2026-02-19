@@ -12,8 +12,10 @@ class Pull:
         if not isinstance(taskIds, list):
             raise ValueError("task IDs is not a valid list, must be of type list (e.g. [123, 123, 123, ..., 123])")
             sys.exit()
-        elif len(taskIds) != 6:
-            raise ValueError(f"Not all IDs are in the list. Missing {6 - len(taskIds)} tasks")
+        elif len(taskIds) < 1:
+            raise ValueError("task IDs list must include at least 1 task ID")
+        elif len(taskIds) > 6:
+            raise ValueError("task IDs list must include at most 6 task IDs")
         else:
             self.IDs = taskIds
         self.tease = tease

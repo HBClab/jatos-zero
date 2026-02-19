@@ -13,6 +13,7 @@ except ModuleNotFoundError:  # pragma: no cover - Python < 3.11 fallback
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_CONFIG_PATH = REPO_ROOT / "config" / "pipeline.toml"
 ALLOWED_DOMAINS = {"cc", "mem", "ps", "wl"}
+MAX_TASK_IDS_PER_TASK = 6
 
 
 class PipelineConfigValidationError(ValueError):
@@ -149,6 +150,11 @@ def _load_task_routes(
         if not raw_task_ids:
             raise PipelineConfigValidationError(
                 f"Expected '{task_key_path}.task_ids' to be a non-empty list"
+            )
+        if len(raw_task_ids) > MAX_TASK_IDS_PER_TASK:
+            raise PipelineConfigValidationError(
+                f"Expected '{task_key_path}.task_ids' to contain at most "
+                f"{MAX_TASK_IDS_PER_TASK} IDs, found {len(raw_task_ids)}"
             )
         task_ids: list[int] = []
         for idx, task_id in enumerate(raw_task_ids):
