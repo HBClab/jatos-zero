@@ -227,7 +227,7 @@ This feature is complete when:
 - [x] A test: add `tests/config/test_source_and_logging.py` for single-source config behavior and key log assertions.
 
 ***Checkpoint 7: Regression + CI Alignment***
-- [ ] Add/adjust e2e regression tests to confirm baseline-known-task behavior remains intact under baseline TOML.
-- [ ] Ensure all new tests fit repo structure under `tests/` and use deterministic fixtures.
-- [ ] Run local quality gate (`python -m flake8 code`, `pytest`) and fix issues.
-- [ ] A test: CI-equivalent local run passes lint + full test suite with config feature enabled.
+- [x] Add/adjust e2e regression tests to confirm baseline-known-task behavior remains intact under baseline TOML.
+- [x] Ensure all new tests fit repo structure under `tests/` and use deterministic fixtures.
+- [x] Run local quality gate (`python -m flake8 code`, `pytest`) and fix issues.
+- [x] A test: CI-equivalent local run passes lint + full test suite with config feature enabled.
