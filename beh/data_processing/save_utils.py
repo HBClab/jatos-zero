@@ -1,7 +1,13 @@
 import re
+import json
+import hashlib
 import matplotlib.pyplot as plt
 from termcolor import cprint
 from pathlib import Path
+import pandas as pd
+import numpy as np
+
+from data_processing.csv_compare import semantic_csv_equal
 
 
 class SAVE_EVERYTHING:
@@ -45,6 +51,194 @@ class SAVE_EVERYTHING:
     def _task_plot_dir(self, subject_id: str, session: str, task: str) -> Path:
         return Path(self.datadir) / subject_id / session / task / "plot"
 
+    @staticmethod
+    def _atomic_write_text(content: str, target_path: Path) -> None:
+        tmp_path = target_path.with_suffix(target_path.suffix + ".tmp")
+        tmp_path.write_text(content, encoding="utf-8")
+        tmp_path.replace(target_path)
+
+    @staticmethod
+    def _atomic_write_csv(df, target_path: Path) -> None:
+        tmp_path = target_path.with_suffix(target_path.suffix + ".tmp")
+        df.to_csv(tmp_path, index=False)
+        tmp_path.replace(target_path)
+
+    @staticmethod
+    def _atomic_write_figure(figure, target_path: Path) -> None:
+        tmp_path = target_path.with_name(
+            f"{target_path.stem}.tmp{target_path.suffix}"
+        )
+        figure.savefig(tmp_path)
+        tmp_path.replace(target_path)
+
+    @staticmethod
+    def _round_float(value, precision: int = 8):
+        return round(float(value), precision)
+
+    @classmethod
+    def _normalize_numeric_sequence(cls, values):
+        normalized = []
+        for value in values:
+            if pd.isna(value):
+                normalized.append(None)
+            elif isinstance(value, (int, float, np.integer, np.floating)):
+                normalized.append(cls._round_float(value))
+            else:
+                normalized.append(str(value))
+        return normalized
+
+    @classmethod
+    def _axis_metadata(cls, axis) -> dict:
+        legend = axis.get_legend()
+        legend_labels = []
+        if legend is not None:
+            legend_labels = [text.get_text() for text in legend.get_texts()]
+
+        line_payload = []
+        for line in axis.lines:
+            line_payload.append(
+                {
+                    "x": cls._normalize_numeric_sequence(line.get_xdata(orig=False)),
+                    "y": cls._normalize_numeric_sequence(line.get_ydata(orig=False)),
+                    "label": line.get_label(),
+                }
+            )
+
+        patch_payload = []
+        for patch in axis.patches:
+            if all(
+                hasattr(patch, attr)
+                for attr in ("get_x", "get_y", "get_width", "get_height")
+            ):
+                patch_payload.append(
+                    {
+                        "x": cls._round_float(patch.get_x()),
+                        "y": cls._round_float(patch.get_y()),
+                        "width": cls._round_float(patch.get_width()),
+                        "height": cls._round_float(patch.get_height()),
+                    }
+                )
+                continue
+
+            path = patch.get_path()
+            vertices = path.vertices if path is not None else []
+            patch_payload.append(
+                {
+                    "vertices_hash": cls._hash_payload(
+                        [
+                            (
+                                cls._round_float(vertex[0]),
+                                cls._round_float(vertex[1]),
+                            )
+                            for vertex in vertices
+                        ]
+                    )
+                }
+            )
+
+        collection_payload = []
+        for collection in axis.collections:
+            if not hasattr(collection, "get_offsets"):
+                continue
+            offsets = collection.get_offsets()
+            points = []
+            if offsets is not None and len(offsets) > 0:
+                points = [
+                    (
+                        int(round(float(point[0]))),
+                        cls._round_float(point[1]),
+                    )
+                    for point in offsets
+                ]
+                points = sorted(points)
+            collection_payload.append(points)
+
+        return {
+            "title": axis.get_title(),
+            "xlabel": axis.get_xlabel(),
+            "ylabel": axis.get_ylabel(),
+            "xticks": [tick.get_text() for tick in axis.get_xticklabels()],
+            "yticks": [tick.get_text() for tick in axis.get_yticklabels()],
+            "legend_labels": legend_labels,
+            "line_hash": cls._hash_payload(line_payload),
+            "patch_hash": cls._hash_payload(patch_payload),
+            "collection_hash": cls._hash_payload(collection_payload),
+        }
+
+    @staticmethod
+    def _hash_payload(payload) -> str:
+        as_json = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+        return hashlib.sha256(as_json.encode("utf-8")).hexdigest()
+
+    @classmethod
+    def _build_plot_signature(
+        cls,
+        *,
+        task: str,
+        subject: str,
+        session: str,
+        plot_slot: str,
+        axis,
+    ) -> dict:
+        figure = axis.figure
+        figure.set_dpi(figure.get_dpi())
+        figure.canvas.draw()
+        return {
+            "task": task,
+            "subject": subject,
+            "session": session,
+            "plot_slot": plot_slot,
+            "figure_size": [
+                cls._round_float(figure.get_figwidth()),
+                cls._round_float(figure.get_figheight()),
+            ],
+            "axis_metadata": cls._axis_metadata(axis),
+        }
+
+    @staticmethod
+    def _plot_signature_path(plot_path: Path) -> Path:
+        return plot_path.with_suffix(plot_path.suffix + ".sig.json")
+
+    @classmethod
+    def _write_plot_if_changed(cls, axis, plot_path: Path, signature: dict) -> str:
+        signature_path = cls._plot_signature_path(plot_path)
+        signature_hash = cls._hash_payload(signature)
+
+        if plot_path.exists() and signature_path.exists():
+            try:
+                existing_signature = json.loads(
+                    signature_path.read_text(encoding="utf-8")
+                )
+                existing_hash = existing_signature.get("signature_hash")
+                if existing_hash == signature_hash:
+                    return "skipped"
+            except (json.JSONDecodeError, OSError):
+                pass
+
+        outcome = "created" if not plot_path.exists() else "updated"
+        cls._atomic_write_figure(axis.figure, plot_path)
+        payload = {
+            "signature_hash": signature_hash,
+            "signature": signature,
+        }
+        cls._atomic_write_text(
+            json.dumps(payload, sort_keys=True, indent=2),
+            signature_path,
+        )
+        return outcome
+
+    def _write_csv_if_changed(self, df, csv_path: Path) -> str:
+        if not csv_path.exists():
+            self._atomic_write_csv(df, csv_path)
+            return "created"
+
+        existing_df = pd.read_csv(csv_path)
+        if semantic_csv_equal(existing_df, df):
+            return "skipped"
+
+        self._atomic_write_csv(df, csv_path)
+        return "updated"
+
     def save_dfs(self, categories, task):
         cprint("saving task: " + task, "green")
         for subjectID, category, df in categories:
@@ -61,7 +255,13 @@ class SAVE_EVERYTHING:
             outdir = self._task_data_dir(subject, session, task)
             outdir.mkdir(parents=True, exist_ok=True)
             csv_path = outdir / f"{subject}_ses-{session}_cat-{category}.csv"
-            df.to_csv(csv_path, index=False)
+            outcome = self._write_csv_if_changed(df, csv_path)
+            outcome_color = {
+                "created": "green",
+                "updated": "yellow",
+                "skipped": "cyan",
+            }.get(outcome, "green")
+            cprint(f"[{outcome}] csv artifact: {csv_path}", outcome_color)
 
             session_key = (subject, task)
             if session_key not in self.sessions:
@@ -94,11 +294,41 @@ class SAVE_EVERYTHING:
                 if isinstance(plot_obj, tuple):  # Handle multiple plots
                     for i, individual_plot in enumerate(plot_obj):
                         plot_path = outdir / f"{subject}_ses-{session}_plot{i+1}.png"
-                        individual_plot.figure.savefig(plot_path)
+                        signature = self._build_plot_signature(
+                            task=task,
+                            subject=subject,
+                            session=session,
+                            plot_slot=f"plot{i+1}",
+                            axis=individual_plot,
+                        )
+                        outcome = self._write_plot_if_changed(
+                            individual_plot,
+                            plot_path,
+                            signature,
+                        )
+                        outcome_color = {
+                            "created": "green",
+                            "updated": "yellow",
+                            "skipped": "cyan",
+                        }.get(outcome, "green")
+                        cprint(f"[{outcome}] plot artifact: {plot_path}", outcome_color)
                         plt.close(individual_plot.figure)
                 else:  # Handle a single plot
                     plot_path = outdir / f"{subject}_ses-{session}.png"
-                    plot_obj.figure.savefig(plot_path)
+                    signature = self._build_plot_signature(
+                        task=task,
+                        subject=subject,
+                        session=session,
+                        plot_slot="plot",
+                        axis=plot_obj,
+                    )
+                    outcome = self._write_plot_if_changed(plot_obj, plot_path, signature)
+                    outcome_color = {
+                        "created": "green",
+                        "updated": "yellow",
+                        "skipped": "cyan",
+                    }.get(outcome, "green")
+                    cprint(f"[{outcome}] plot artifact: {plot_path}", outcome_color)
                     plt.close(plot_obj.figure)
 
 

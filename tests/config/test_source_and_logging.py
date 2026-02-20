@@ -6,11 +6,13 @@ from config.pipeline_config import (
     PipelineColumnsConfig,
     PipelineConfig,
     PipelineDefaultsConfig,
+    PipelineOutputsConfig,
     PipelineRuntimeConfig,
     TaskQCConfig,
     TaskRouteConfig,
     load_pipeline_config,
 )
+from data_processing.save_utils import SAVE_EVERYTHING
 import main_handler
 from main_handler import Handler
 
@@ -93,6 +95,9 @@ def test_startup_logging_reports_effective_config(monkeypatch) -> None:
     assert "enable_saved_data=True" in startup_log
     assert "data_root_path=." in startup_log
     assert "data_folder_name=data" in startup_log
+    assert "resolved_data_root=" in startup_log
+    assert "save_dedup_csv=True" in startup_log
+    assert "save_dedup_plots=True" in startup_log
     assert color == "cyan"
 
 
@@ -142,3 +147,40 @@ def test_task_logging_reports_route_qc_and_columns(monkeypatch) -> None:
     assert "subject_column=subject_default" in task_log
     assert "session_column=session_default" in task_log
     assert color == "cyan"
+
+
+def test_task_output_logging_reports_resolved_root_and_dedup(monkeypatch) -> None:
+    runtime_config = PipelineRuntimeConfig(
+        schema_version=1,
+        pipeline=PipelineConfig(
+            enable_plots=True,
+            outputs=PipelineOutputsConfig(
+                enable_saved_data=True,
+                data_root_path="/tmp",
+                data_folder_name="unit-data",
+            ),
+            tasks={"AF": TaskRouteConfig(domain="cc", task_ids=[945])},
+        ),
+        config_path=Path("/tmp/pipeline.toml"),
+    )
+    logs: list[tuple[str, str]] = []
+    monkeypatch.setattr(main_handler, "load_pipeline_config", lambda **kwargs: runtime_config)
+    monkeypatch.setattr(
+        main_handler,
+        "cprint",
+        lambda message, color: logs.append((message, color)),
+    )
+    monkeypatch.setattr(SAVE_EVERYTHING, "save_dfs", lambda self, categories, task: None)
+    monkeypatch.setattr(SAVE_EVERYTHING, "save_plots", lambda self, plots, task: None)
+
+    handler = Handler()
+    logs.clear()
+    handler._save_task_artifacts(task="AF", categories=[], plots=[])
+
+    assert logs
+    output_logs = [entry for entry, color in logs if color == "cyan"]
+    assert output_logs
+    assert any("Task AF output config:" in entry for entry in output_logs)
+    assert any("resolved_data_root=" in entry for entry in output_logs)
+    assert any("save_dedup_csv=True" in entry for entry in output_logs)
+    assert any("save_dedup_plots=True" in entry for entry in output_logs)

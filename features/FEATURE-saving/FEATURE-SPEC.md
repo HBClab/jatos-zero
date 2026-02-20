@@ -132,31 +132,31 @@ This spec is scoped to **known tasks only** and must stay compatible with the pr
 ---
 
 ***Checkpoint 1: Output config + path resolver foundation***
-- [ ] Extend config schema to add output save settings for data root/path naming (without breaking existing defaults).
-- [ ] Implement a single resolver utility that computes effective save root as `<data_root_path>/<data_folder_name>`.
-- [ ] Route `SAVE_EVERYTHING` and dependent callers to consume resolved paths instead of hardcoded obs/int + UI/NE branches.
-- [ ] A test: add config + resolver tests under `tests/config/` to validate defaults, path composition, and rejection of invalid values.
+- [x] Extend config schema to add output save settings for data root/path naming (without breaking existing defaults).
+- [x] Implement a single resolver utility that computes effective save root as `<data_root_path>/<data_folder_name>`.
+- [x] Route `SAVE_EVERYTHING` and dependent callers to consume resolved paths instead of hardcoded obs/int + UI/NE branches.
+- [x] A test: add config + resolver tests under `tests/config/` to validate defaults, path composition, and rejection of invalid values.
 
 ***Checkpoint 2: Canonical data layout migration***
-- [ ] Replace legacy path routing in `beh/data_processing/save_utils.py` with canonical `<root>/<subject>/<session>/<task>/data/` writes.
-- [ ] Ensure subject/session extraction uses pipeline defaults/task overrides and fails safely for malformed inputs.
-- [ ] Keep known-task-only behavior unchanged in orchestration (`beh/main_handler.py`).
-- [ ] A test: update/add e2e assertions in `tests/e2e/test_known_task_happy_path.py` and `tests/e2e/test_unknown_task_noop.py` for new directory structure and unknown-task no-op.
+- [x] Replace legacy path routing in `beh/data_processing/save_utils.py` with canonical `<root>/<subject>/<session>/<task>/data/` writes.
+- [x] Ensure subject/session extraction uses pipeline defaults/task overrides and fails safely for malformed inputs.
+- [x] Keep known-task-only behavior unchanged in orchestration (`beh/main_handler.py`).
+- [x] A test: update/add e2e assertions in `tests/e2e/test_known_task_happy_path.py` and `tests/e2e/test_unknown_task_noop.py` for new directory structure and unknown-task no-op.
 
 ***Checkpoint 3: CSV de-dup with tolerance-aware compare***
-- [ ] Add a reusable CSV comparator utility that normalizes order and applies minor float tolerance.
-- [ ] Integrate comparator into save path so unchanged semantic CSV content is skipped and changed content is atomically rewritten.
-- [ ] Emit save outcome state (`created`/`updated`/`skipped`) for each artifact.
-- [ ] A test: add focused tests under `tests/data_processing/` proving skip-on-equivalent, rewrite-on-change, and tolerance behavior.
+- [x] Add a reusable CSV comparator utility that normalizes order and applies minor float tolerance.
+- [x] Integrate comparator into save path so unchanged semantic CSV content is skipped and changed content is atomically rewritten.
+- [x] Emit save outcome state (`created`/`updated`/`skipped`) for each artifact.
+- [x] A test: add focused tests under `tests/data_processing/` proving skip-on-equivalent, rewrite-on-change, and tolerance behavior.
 
 ***Checkpoint 4: Plot metadata-signature de-dup***
-- [ ] Define normalized metadata signature extraction for plot outputs (task, subject, session, plot slot, and deterministic plot metadata fields).
-- [ ] Persist and compare signatures to skip unchanged plot writes; rewrite when signature changes.
-- [ ] Keep plot generation toggle semantics unchanged.
-- [ ] A test: extend e2e plot-enabled coverage in `tests/e2e/test_known_task_happy_path.py` to validate skip vs rewrite behavior via signatures.
+- [x] Define normalized metadata signature extraction for plot outputs (task, subject, session, plot slot, and deterministic plot metadata fields).
+- [x] Persist and compare signatures to skip unchanged plot writes; rewrite when signature changes.
+- [x] Keep plot generation toggle semantics unchanged.
+- [x] A test: extend e2e plot-enabled coverage in `tests/e2e/test_known_task_happy_path.py` to validate skip vs rewrite behavior via signatures.
 
 ***Checkpoint 5: Meta compatibility + temporary cleanup***
-- [ ] Ensure meta rebuild remains identical for known tasks with new save layout and de-dup flows.
-- [ ] Add best-effort `finally` cleanup for temporary artifacts used only for internal meta assembly.
-- [ ] Add startup/runtime logging for resolved output config and per-artifact save outcomes.
-- [ ] A test: add/extend integration tests ensuring meta files are produced unchanged and temporary files are cleaned after both success and failure paths.
+- [x] Ensure meta rebuild remains identical for known tasks with new save layout and de-dup flows.
+- [x] Add best-effort `finally` cleanup for temporary artifacts used only for internal meta assembly.
+- [x] Add startup/runtime logging for resolved output config and per-artifact save outcomes.
+- [x] A test: add/extend integration tests ensuring meta files are produced unchanged and temporary files are cleaned after both success and failure paths.
