@@ -90,6 +90,9 @@ def test_startup_logging_reports_effective_config(monkeypatch) -> None:
     assert "config_path=/tmp/pipeline.toml" in startup_log
     assert "configured_tasks=AF" in startup_log
     assert "enable_plots=False" in startup_log
+    assert "enable_saved_data=True" in startup_log
+    assert "data_root_path=." in startup_log
+    assert "data_folder_name=data" in startup_log
     assert color == "cyan"
 
 

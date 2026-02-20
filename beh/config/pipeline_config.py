@@ -14,6 +14,9 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_CONFIG_PATH = REPO_ROOT / "config" / "pipeline.toml"
 ALLOWED_DOMAINS = {"cc", "mem", "ps", "wl"}
 MAX_TASK_IDS_PER_TASK = 6
+DEFAULT_ENABLE_SAVED_DATA = True
+DEFAULT_DATA_ROOT_PATH = "."
+DEFAULT_DATA_FOLDER_NAME = "data"
 
 
 class PipelineConfigValidationError(ValueError):
@@ -47,9 +50,17 @@ class PipelineDefaultsConfig:
 
 
 @dataclass(frozen=True)
+class PipelineOutputsConfig:
+    enable_saved_data: bool = DEFAULT_ENABLE_SAVED_DATA
+    data_root_path: str = DEFAULT_DATA_ROOT_PATH
+    data_folder_name: str = DEFAULT_DATA_FOLDER_NAME
+
+
+@dataclass(frozen=True)
 class PipelineConfig:
     enable_plots: bool = False
     defaults: PipelineDefaultsConfig = field(default_factory=PipelineDefaultsConfig)
+    outputs: PipelineOutputsConfig = field(default_factory=PipelineOutputsConfig)
     tasks: dict[str, TaskRouteConfig] = field(default_factory=dict)
 
 
@@ -119,6 +130,15 @@ def _validate_optional_string(value: Any, key_path: str) -> str | None:
     if value is None:
         return None
     return _validate_string(value, key_path)
+
+
+def _validate_non_empty_string(value: Any, key_path: str) -> str:
+    validated = _validate_string(value, key_path)
+    if not validated.strip():
+        raise PipelineConfigValidationError(
+            f"Expected '{key_path}' to be a non-empty string"
+        )
+    return validated
 
 
 def _load_task_routes(
@@ -229,7 +249,11 @@ def load_pipeline_config(
         _require_key(raw_config, "pipeline", "root"),
         "pipeline",
     )
-    _reject_unknown_keys(pipeline_table, {"enable_plots", "defaults", "tasks"}, "pipeline")
+    _reject_unknown_keys(
+        pipeline_table,
+        {"enable_plots", "defaults", "outputs", "tasks"},
+        "pipeline",
+    )
 
     raw_enable_plots = pipeline_table.get("enable_plots", False)
     enable_plots = _validate_bool(raw_enable_plots, "pipeline.enable_plots")
@@ -249,6 +273,26 @@ def load_pipeline_config(
         "pipeline.defaults.columns.session",
     )
 
+    outputs_table = _as_dict(pipeline_table.get("outputs"), "pipeline.outputs")
+    _reject_unknown_keys(
+        outputs_table,
+        {"enable_saved_data", "data_root_path", "data_folder_name"},
+        "pipeline.outputs",
+    )
+
+    enable_saved_data = _validate_bool(
+        outputs_table.get("enable_saved_data", DEFAULT_ENABLE_SAVED_DATA),
+        "pipeline.outputs.enable_saved_data",
+    )
+    data_root_path = _validate_non_empty_string(
+        outputs_table.get("data_root_path", DEFAULT_DATA_ROOT_PATH),
+        "pipeline.outputs.data_root_path",
+    )
+    data_folder_name = _validate_non_empty_string(
+        outputs_table.get("data_folder_name", DEFAULT_DATA_FOLDER_NAME),
+        "pipeline.outputs.data_folder_name",
+    )
+
     tasks_table = _as_dict(
         _require_key(pipeline_table, "tasks", "pipeline"),
         "pipeline.tasks",
@@ -264,6 +308,11 @@ def load_pipeline_config(
                     subject=subject_column,
                     session=session_column,
                 )
+            ),
+            outputs=PipelineOutputsConfig(
+                enable_saved_data=enable_saved_data,
+                data_root_path=data_root_path,
+                data_folder_name=data_folder_name,
             ),
             tasks=_load_task_routes(tasks_table, known_tasks=known_tasks_set),
         ),

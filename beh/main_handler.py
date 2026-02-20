@@ -9,6 +9,7 @@ from data_processing.wl_qc import WL_QC
 from data_processing.plot_utils import CC_PLOTS, MEM_PLOTS, PS_PLOTS
 from data_processing.save_utils import SAVE_EVERYTHING
 from config.pipeline_config import load_runtime_pipeline_config as load_pipeline_config
+from config.output_paths import resolve_data_save_root
 import atexit
 import os
 from termcolor import cprint
@@ -68,13 +69,24 @@ class Handler:
     def _log_startup_effective_config(self) -> None:
         configured = self.configured_tasks()
         configured_repr = ",".join(configured) if configured else "<none>"
+        outputs = self.pipeline_config.pipeline.outputs
         cprint(
             "Pipeline startup config: "
             f"schema_version={self.pipeline_config.schema_version}, "
             f"config_path={self.pipeline_config.config_path}, "
             f"configured_tasks={configured_repr}, "
-            f"enable_plots={self.pipeline_config.pipeline.enable_plots}",
+            f"enable_plots={self.pipeline_config.pipeline.enable_plots}, "
+            f"enable_saved_data={outputs.enable_saved_data}, "
+            f"data_root_path={outputs.data_root_path}, "
+            f"data_folder_name={outputs.data_folder_name}",
             "cyan",
+        )
+
+    def resolve_data_save_root(self):
+        outputs = self.pipeline_config.pipeline.outputs
+        return resolve_data_save_root(
+            data_root_path=outputs.data_root_path,
+            data_folder_name=outputs.data_folder_name,
         )
 
     def _log_task_effective_config(self, task: str) -> None:
@@ -178,7 +190,15 @@ class Handler:
         self._meta_rebuild_pending = False
 
     def _save_task_artifacts(self, task: str, categories, plots) -> None:
+        if not self.pipeline_config.pipeline.outputs.enable_saved_data:
+            cprint(
+                f"Saved-data persistence disabled by config; skipping task {task} artifacts.",
+                "yellow",
+            )
+            return
         save_instance = SAVE_EVERYTHING()
+        if save_instance.datadir == "./data":
+            save_instance.datadir = str(self.resolve_data_save_root())
         save_instance.save_dfs(categories=categories, task=task)
         if self.pipeline_config.pipeline.enable_plots:
             save_instance.save_plots(plots=plots, task=task)
