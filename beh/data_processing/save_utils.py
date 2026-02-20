@@ -1,4 +1,3 @@
-import os
 import re
 import matplotlib.pyplot as plt
 from termcolor import cprint
@@ -8,35 +7,66 @@ from pathlib import Path
 class SAVE_EVERYTHING:
     def __init__(self):
         self.datadir = './data'
-        self.sessions = {}  # Dictionary to track session numbers for each subjectID
+        # Track observed sessions for subject/task so plot paths can align.
+        self.sessions: dict[tuple[str, str], set[str]] = {}
 
-    def _get_folder(self, subjID):
-        try:
-            subj_int = int(subjID)
-        except (TypeError, ValueError):
-            # Default to NE intervention for malformed IDs (logged upstream)
-            return 'int', 'NE'
-        if 7000 <= subj_int < 8000:
-            return 'obs', 'UI'
-        elif 8000 <= subj_int < 9000:
-            return 'int', 'UI'
-        else:
-            return 'int', 'NE'
+    @staticmethod
+    def _normalize_scalar(value):
+        if value is None:
+            return None
+        if hasattr(value, "item"):
+            try:
+                value = value.item()
+            except Exception:
+                pass
+        if isinstance(value, str):
+            value = value.strip()
+            if not value:
+                return None
+            return value
+        return str(value)
+
+    @classmethod
+    def _extract_session_value(cls, df):
+        for column_name in ("session_number", "session"):
+            if column_name not in df.columns:
+                continue
+            series = df[column_name].dropna()
+            if series.empty:
+                continue
+            session = cls._normalize_scalar(series.iloc[0])
+            if session is not None:
+                return session
+        return None
+
+    def _task_data_dir(self, subject_id: str, session: str, task: str) -> Path:
+        return Path(self.datadir) / subject_id / session / task / "data"
+
+    def _task_plot_dir(self, subject_id: str, session: str, task: str) -> Path:
+        return Path(self.datadir) / subject_id / session / task / "plot"
 
     def save_dfs(self, categories, task):
         cprint("saving task: " + task, "green")
         for subjectID, category, df in categories:
-            folder1, folder2 = self._get_folder(subjectID)
-            outdir = os.path.join(self.datadir, folder1, folder2, str(subjectID), task, 'data')
-            session = df['session_number'][2]
-            os.makedirs(outdir, exist_ok=True)
-            csv_path = os.path.join(outdir, f"{subjectID}_ses-{session}_cat-{category}.csv")
+            subject = self._normalize_scalar(subjectID)
+            session = self._extract_session_value(df)
+            if subject is None or session is None:
+                cprint(
+                    f"Skipping save for task {task}: invalid subject/session "
+                    f"(subject={subjectID}, session={session})",
+                    "yellow",
+                )
+                continue
+
+            outdir = self._task_data_dir(subject, session, task)
+            outdir.mkdir(parents=True, exist_ok=True)
+            csv_path = outdir / f"{subject}_ses-{session}_cat-{category}.csv"
             df.to_csv(csv_path, index=False)
 
-            # Update the sessions dictionary
-            if subjectID not in self.sessions:
-                self.sessions[subjectID] = set()
-            self.sessions[subjectID].add(session)
+            session_key = (subject, task)
+            if session_key not in self.sessions:
+                self.sessions[session_key] = set()
+            self.sessions[session_key].add(session)
 
     def save_plots(self, plots, task):
         # Validate 'plots' for NoneType objects
@@ -48,21 +78,26 @@ class SAVE_EVERYTHING:
             if subjectID is None or plot_obj is None:
                 raise ValueError(f"Invalid data in plots: subjectID={subjectID}, plot_obj={plot_obj}")
 
-            if subjectID not in self.sessions:
-                raise ValueError(f"No session information found for subjectID {subjectID}.")
+            subject = self._normalize_scalar(subjectID)
+            session_key = (subject, task)
+            if subject is None or session_key not in self.sessions:
+                cprint(
+                    f"Skipping plot save for task {task}: no session information for "
+                    f"subject={subjectID}",
+                    "yellow",
+                )
+                continue
 
-            folder1, folder2 = self._get_folder(subjectID)
-            outdir = os.path.join(self.datadir, folder1, folder2, str(subjectID), task, 'plot')
-            os.makedirs(outdir, exist_ok=True)
-
-            for session in self.sessions[subjectID]:
+            for session in sorted(self.sessions[session_key], key=str):
+                outdir = self._task_plot_dir(subject, session, task)
+                outdir.mkdir(parents=True, exist_ok=True)
                 if isinstance(plot_obj, tuple):  # Handle multiple plots
                     for i, individual_plot in enumerate(plot_obj):
-                        plot_path = os.path.join(outdir, f"{subjectID}_ses-{session}_plot{i+1}.png")
+                        plot_path = outdir / f"{subject}_ses-{session}_plot{i+1}.png"
                         individual_plot.figure.savefig(plot_path)
                         plt.close(individual_plot.figure)
                 else:  # Handle a single plot
-                    plot_path = os.path.join(outdir, f"{subjectID}_ses-{session}.png")
+                    plot_path = outdir / f"{subject}_ses-{session}.png"
                     plot_obj.figure.savefig(plot_path)
                     plt.close(plot_obj.figure)
 
@@ -150,12 +185,7 @@ def normalize_category_exports(
 
 """
 
-7000s- UI Observational
-8000s- UI Intervention
-9000s- NE Intervention
-
-folder structure =
-int -> UI/NE -> subID -> task -> data/plot
-obs -> UI/NE -> subID -> task -> data/plot
+canonical folder structure =
+<data_root>/<subject>/<session>/<task>/data|plot
 
 """

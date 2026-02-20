@@ -43,6 +43,20 @@ def test_af_known_task_happy_path_generates_artifacts_and_meta(
         patched_convert_to_csv,
     )
 
+    plot_disabled_config = PipelineRuntimeConfig(
+        schema_version=1,
+        pipeline=PipelineConfig(
+            enable_plots=False,
+            tasks={"AF": TaskRouteConfig(domain="cc", task_ids=[945])},
+        ),
+        config_path=Path("/tmp/pipeline.toml"),
+    )
+    monkeypatch.setattr(
+        main_handler,
+        "load_pipeline_config",
+        lambda **kwargs: plot_disabled_config,
+    )
+
     original_save_init = SAVE_EVERYTHING.__init__
 
     def patched_save_init(self):
@@ -66,7 +80,8 @@ def test_af_known_task_happy_path_generates_artifacts_and_meta(
     assert len(plots) == 1
 
     subject_id = str(af_df["subject_id"].iloc[0])
-    subject_root = data_root / "int" / "NE" / subject_id / "AF"
+    session = str(af_df["session_number"].iloc[0])
+    subject_root = data_root / subject_id / session / "AF"
 
     data_files = sorted((subject_root / "data").glob("*.csv"))
     assert len(data_files) == 1
@@ -147,7 +162,8 @@ def test_af_happy_path_generates_plots_when_enabled(
     handler.convert_to_csv(dummy_txt_frames, "AF")
 
     subject_id = str(af_df["subject_id"].iloc[0])
-    subject_root = data_root / "int" / "NE" / subject_id / "AF"
+    session = str(af_df["session_number"].iloc[0])
+    subject_root = data_root / subject_id / session / "AF"
     plot_files = sorted((subject_root / "plot").glob("*.png"))
     assert len(plot_files) == 2
     assert any(path.name.endswith("_plot1.png") for path in plot_files)
