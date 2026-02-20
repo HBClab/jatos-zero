@@ -321,8 +321,9 @@ class Handler:
         csv_instance = CONVERT_TO_CSV(task)
         csv_dfs = csv_instance.convert_to_csv(txt_dfs)
         result = self.choose_construct(csv_dfs, task)
-        self._meta_rebuild_pending = True
-        self._run_meta_if_needed(force=True)
+        if self.pipeline_config.pipeline.outputs.enable_saved_data:
+            self._meta_rebuild_pending = True
+            self._run_meta_if_needed(force=True)
         return csv_dfs, result
 
     def choose_construct(self, csv_dfs, task):

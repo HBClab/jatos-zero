@@ -10,6 +10,7 @@ from data_processing.save_utils import SAVE_EVERYTHING
 from data_processing.utils import CONVERT_TO_CSV
 from config.pipeline_config import (
     PipelineConfig,
+    PipelineOutputsConfig,
     PipelineRuntimeConfig,
     TaskRouteConfig,
 )
@@ -324,3 +325,63 @@ def test_meta_outputs_are_byte_identical_on_no_change_rerun(
     }
 
     assert second_bytes == first_bytes
+
+
+def test_meta_rebuild_is_skipped_when_saved_data_persistence_is_disabled(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    data_root = tmp_path / "data"
+    meta_root = tmp_path / "meta"
+    data_root.mkdir(parents=True, exist_ok=True)
+    meta_root.mkdir(parents=True, exist_ok=True)
+
+    af_df = load_dataframe_fixture("af_known_task", "af_minimal_trials.csv")
+    af_df["session_number"] = pd.to_numeric(
+        af_df.get("session", 1), errors="coerce"
+    ).fillna(1)
+    af_df["block"] = af_df["block"].astype(str).str.lower()
+
+    def patched_convert_to_csv(self, txt_dfs):
+        return [af_df.copy()]
+
+    monkeypatch.setattr(
+        CONVERT_TO_CSV,
+        "convert_to_csv",
+        patched_convert_to_csv,
+    )
+
+    persistence_disabled_config = PipelineRuntimeConfig(
+        schema_version=1,
+        pipeline=PipelineConfig(
+            enable_plots=False,
+            outputs=PipelineOutputsConfig(enable_saved_data=False),
+            tasks={"AF": TaskRouteConfig(domain="cc", task_ids=[945])},
+        ),
+        config_path=Path("/tmp/pipeline.toml"),
+    )
+    monkeypatch.setattr(
+        main_handler,
+        "load_pipeline_config",
+        lambda **kwargs: persistence_disabled_config,
+    )
+
+    handler = Handler()
+    handler._meta_recreator = META_RECREATE(
+        data_root=data_root,
+        meta_root=meta_root,
+    )
+
+    meta_called = {"called": False}
+
+    def patched_recreate(domain: str):
+        meta_called["called"] = True
+        return {}
+
+    monkeypatch.setattr(handler._meta_recreator, "recreate", patched_recreate)
+
+    dummy_txt_frames = [pd.DataFrame([{"file_content": "[]"}])]
+    handler.convert_to_csv(dummy_txt_frames, "AF")
+
+    assert meta_called["called"] is False
+    assert not any(meta_root.rglob("*"))
