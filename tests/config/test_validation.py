@@ -200,7 +200,7 @@ task_ids = [1, 2, 3, 4, 5, 6, 7]
         load_pipeline_config(config_path, known_tasks={"AF"})
 
 
-def test_validation_rejects_attempt_to_configure_output_disables(tmp_path: Path) -> None:
+def test_validation_accepts_outputs_settings(tmp_path: Path) -> None:
     config_path = _write_config(
         tmp_path,
         """
@@ -210,17 +210,16 @@ schema_version = 1
 enable_plots = false
 
 [pipeline.outputs]
-enable_meta = false
 enable_saved_data = false
+data_root_path = "/tmp"
+data_folder_name = "artifacts"
 
 [pipeline.tasks.AF]
 domain = "cc"
 task_ids = [945]
 """.strip(),
     )
-
-    with pytest.raises(
-        PipelineConfigValidationError,
-        match=r"pipeline\.outputs",
-    ):
-        load_pipeline_config(config_path, known_tasks={"AF"})
+    loaded = load_pipeline_config(config_path, known_tasks={"AF"})
+    assert loaded.pipeline.outputs.enable_saved_data is False
+    assert loaded.pipeline.outputs.data_root_path == "/tmp"
+    assert loaded.pipeline.outputs.data_folder_name == "artifacts"

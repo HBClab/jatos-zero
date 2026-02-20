@@ -13,7 +13,9 @@ def test_loader_reads_default_pipeline_toml(repo_root: Path) -> None:
 
     assert config.config_path == expected_path
     assert config.schema_version == 1
-    assert config.pipeline.enable_plots is False
+    assert config.pipeline.outputs.enable_saved_data is True
+    assert config.pipeline.outputs.data_root_path == "."
+    assert config.pipeline.outputs.data_folder_name == "data"
     assert "AF" in config.pipeline.tasks
     assert config.pipeline.tasks["AF"].task_ids == [945, 960, 990, 898, 919, 932]
 

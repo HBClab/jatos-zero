@@ -1,0 +1,17 @@
+[pipeline.tasks.newtask1]
+task_name = "BB"
+domain = "cc"
+subject_column = "subject_id"
+session_column = "session_number"
+accuracy_column = "accuracy"
+rt_column = "reaction_time"
+num_blocks = 1
+num_conditions = 2
+task_ids = [1, 2, 3]
+
+[pipeline.tasks.newtask1.qc]
+desired_metric = ["accuracy", "rt"]
+by_block = false
+by_condition = true
+accuracy_threshold = 0.7
+max_rt = 2000
