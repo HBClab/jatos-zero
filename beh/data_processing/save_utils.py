@@ -4,10 +4,17 @@ import hashlib
 import matplotlib.pyplot as plt
 from termcolor import cprint
 from pathlib import Path
+from dataclasses import dataclass
 import pandas as pd
 import numpy as np
 
 from data_processing.csv_compare import semantic_csv_equal
+
+
+@dataclass(frozen=True)
+class SessionResolution:
+    session: str | None
+    used_placeholder: bool
 
 
 class SAVE_EVERYTHING:
@@ -15,6 +22,7 @@ class SAVE_EVERYTHING:
         self.datadir = './data'
         # Track observed sessions for subject/task so plot paths can align.
         self.sessions: dict[tuple[str, str], set[str]] = {}
+        self._session_allocator_state: dict[tuple[str, str], set[int]] = {}
 
     @staticmethod
     def _normalize_scalar(value):
@@ -44,6 +52,85 @@ class SAVE_EVERYTHING:
             if session is not None:
                 return session
         return None
+
+    @classmethod
+    def _coerce_session_number(cls, value):
+        scalar = cls._normalize_scalar(value)
+        if scalar is None:
+            return None
+
+        if re.fullmatch(r"[+-]?\d+", scalar):
+            return int(scalar)
+
+        if re.fullmatch(r"[+-]?\d+\.0+", scalar):
+            return int(float(scalar))
+
+        return None
+
+    def _observe_session_number(
+        self,
+        subject_id: str,
+        task: str,
+        session_number: int,
+    ) -> None:
+        key = (subject_id, task)
+        observed = self._session_allocator_state.setdefault(key, set())
+        observed.add(session_number)
+
+    def _scan_saved_session_numbers(self, subject_id: str, task: str) -> set[int]:
+        subject_root = Path(self.datadir) / subject_id
+        if not subject_root.exists():
+            return set()
+
+        observed: set[int] = set()
+        for task_dir in subject_root.glob(f"*/{task}"):
+            session_name = task_dir.parent.name
+            session_number = self._coerce_session_number(session_name)
+            if session_number is not None:
+                observed.add(session_number)
+        return observed
+
+    def prime_session_allocator(self, categories, task: str) -> None:
+        subjects: set[str] = set()
+        for subject_id, _, df in categories:
+            subject = self._normalize_scalar(subject_id)
+            if subject is None:
+                continue
+
+            subjects.add(subject)
+            session_number = self._coerce_session_number(
+                self._extract_session_value(df)
+            )
+            if session_number is not None:
+                self._observe_session_number(subject, task, session_number)
+
+        for subject in subjects:
+            key = (subject, task)
+            observed = self._session_allocator_state.setdefault(key, set())
+            observed.update(self._scan_saved_session_numbers(subject, task))
+
+    def resolve_session_for_save(self, subject_id, df, task: str) -> SessionResolution:
+        subject = self._normalize_scalar(subject_id)
+        if subject is None:
+            return SessionResolution(session=None, used_placeholder=False)
+
+        session = self._extract_session_value(df)
+        session_number = self._coerce_session_number(session)
+        if session_number is not None:
+            self._observe_session_number(subject, task, session_number)
+            return SessionResolution(
+                session=str(session_number),
+                used_placeholder=False,
+            )
+
+        key = (subject, task)
+        observed = self._session_allocator_state.setdefault(key, set())
+        if not observed:
+            observed.update(self._scan_saved_session_numbers(subject, task))
+
+        next_session = max(observed, default=0) + 1
+        observed.add(next_session)
+        return SessionResolution(session=str(next_session), used_placeholder=True)
 
     def _task_data_dir(self, subject_id: str, session: str, task: str) -> Path:
         return Path(self.datadir) / subject_id / session / task / "data"
