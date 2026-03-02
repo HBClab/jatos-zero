@@ -132,22 +132,22 @@ This chore is complete when:
 ---
 
 ***Checkpoint 1: Session allocation utility foundation***
-- [ ] Add a centralized helper to resolve/assign session values for save-time records.
-- [ ] Implement missing-session detection and placeholder generation policy (`max+1`) per subject+task.
-- [ ] Include aggregation of observed sessions from in-memory payload and existing artifact paths.
-- [ ] A test: add focused unit tests for allocation behavior, including empty-state start at `1`.
+- [x] Add a centralized helper to resolve/assign session values for save-time records.
+- [x] Implement missing-session detection and placeholder generation policy (`max+1`) per subject+task.
+- [x] Include aggregation of observed sessions from in-memory payload and existing artifact paths.
+- [x] A test: add focused unit tests for allocation behavior, including empty-state start at `1`.
 
 ***Checkpoint 2: Save pipeline integration***
-- [ ] Integrate allocator into CSV save flow in `beh/data_processing/save_utils.py`.
-- [ ] Ensure session tracking for plot saving uses assigned placeholders consistently.
-- [ ] Preserve canonical pathing and dedup behavior (`created`/`updated`/`skipped`).
-- [ ] A test: extend save-utils tests to verify persistence with missing sessions instead of skip.
+- [x] Integrate allocator into CSV save flow in `beh/data_processing/save_utils.py`.
+- [x] Ensure session tracking for plot saving uses assigned placeholders consistently.
+- [x] Preserve canonical pathing and dedup behavior (`created`/`updated`/`skipped`).
+- [x] A test: extend save-utils tests to verify persistence with missing sessions instead of skip.
 
 ***Checkpoint 3: Warning and report artifact***
-- [ ] Add structured warning output for every placeholder assignment.
-- [ ] Add a machine-readable report writer for missing-session events (run-scoped artifact).
-- [ ] Ensure report-write failure is non-fatal and logged.
-- [ ] A test: add coverage for warning content and report-file schema/rows.
+- [x] Add structured warning output for every placeholder assignment.
+- [x] Add a machine-readable report writer for missing-session events (run-scoped artifact).
+- [x] Ensure report-write failure is non-fatal and logged.
+- [x] A test: add coverage for warning content and report-file schema/rows.
 
 ***Checkpoint 4: Meta compatibility and regression coverage***
 - [ ] Validate meta recreation includes placeholder-session records without orchestration changes.

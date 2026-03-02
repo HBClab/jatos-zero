@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -64,6 +65,78 @@ def test_save_plots_uses_placeholder_session_assigned_during_csv_save(
     files = sorted(plot_dir.glob("*.png"))
     assert len(files) == 1
     assert files[0].name == "9001_ses-1.png"
+
+
+def test_save_dfs_warns_and_writes_missing_session_report(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    saver = SAVE_EVERYTHING()
+    saver.datadir = str(tmp_path)
+
+    logs: list[tuple[str, str]] = []
+    monkeypatch.setattr(
+        "data_processing.save_utils.cprint",
+        lambda message, color: logs.append((message, color)),
+    )
+
+    missing_session_df = pd.DataFrame([{"subject_id": "9001", "correct": 1}])
+    saver.save_dfs(categories=[("9001", 1, missing_session_df)], task="AF")
+
+    warning_logs = [message for message, color in logs if color == "yellow"]
+    assert any("task=AF" in message for message in warning_logs)
+    assert any("subject=9001" in message for message in warning_logs)
+    assert any("placeholder session 1" in message for message in warning_logs)
+    assert any("Human review and adjustment required." in message for message in warning_logs)
+
+    report_files = sorted((tmp_path / "_reports").glob("missing_session_assignments_*.json"))
+    assert len(report_files) == 1
+
+    payload = json.loads(report_files[0].read_text(encoding="utf-8"))
+    assert payload["run_started_at"]
+    assert payload["generated_at"]
+    assert len(payload["events"]) == 1
+    assert payload["events"][0]["task"] == "AF"
+    assert payload["events"][0]["subject_id"] == "9001"
+    assert payload["events"][0]["assigned_session"] == "1"
+    assert payload["events"][0]["reason"] == "missing session value at save boundary"
+    assert payload["events"][0]["run_started_at"] == payload["run_started_at"]
+    assert payload["events"][0]["assigned_at"]
+
+
+def test_missing_session_report_write_failure_is_non_fatal(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    saver = SAVE_EVERYTHING()
+    saver.datadir = str(tmp_path)
+
+    logs: list[tuple[str, str]] = []
+    monkeypatch.setattr(
+        "data_processing.save_utils.cprint",
+        lambda message, color: logs.append((message, color)),
+    )
+
+    original_atomic_write_text = SAVE_EVERYTHING._atomic_write_text
+
+    def failing_atomic_write_text(content: str, target_path: Path) -> None:
+        if target_path.name.startswith("missing_session_assignments_"):
+            raise OSError("disk full")
+        original_atomic_write_text(content, target_path)
+
+    monkeypatch.setattr(
+        SAVE_EVERYTHING,
+        "_atomic_write_text",
+        staticmethod(failing_atomic_write_text),
+    )
+
+    missing_session_df = pd.DataFrame([{"subject_id": "9001", "correct": 1}])
+    saver.save_dfs(categories=[("9001", 1, missing_session_df)], task="AF")
+
+    data_files = sorted((tmp_path / "9001" / "1" / "AF" / "data").glob("*.csv"))
+    assert len(data_files) == 1
+    warning_logs = [message for message, color in logs if color == "yellow"]
+    assert any("report write failed" in message for message in warning_logs)
 
 
 def test_save_dfs_still_skips_invalid_subject_without_raising(

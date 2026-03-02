@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from termcolor import cprint
 from pathlib import Path
 from dataclasses import dataclass
+from datetime import datetime, timezone
 import pandas as pd
 import numpy as np
 
@@ -23,6 +24,8 @@ class SAVE_EVERYTHING:
         # Track observed sessions for subject/task so plot paths can align.
         self.sessions: dict[tuple[str, str], set[str]] = {}
         self._session_allocator_state: dict[tuple[str, str], set[int]] = {}
+        self._run_started_at = datetime.now(timezone.utc).isoformat()
+        self._missing_session_events: list[dict[str, str]] = []
 
     @staticmethod
     def _normalize_scalar(value):
@@ -326,6 +329,74 @@ class SAVE_EVERYTHING:
         self._atomic_write_csv(df, csv_path)
         return "updated"
 
+    @staticmethod
+    def _report_timestamp_slug(timestamp: str) -> str:
+        return timestamp.replace(":", "").replace("+", "_").replace(".", "_")
+
+    def _missing_session_report_path(self) -> Path:
+        reports_dir = Path(self.datadir) / "_reports"
+        filename = (
+            "missing_session_assignments_"
+            f"{self._report_timestamp_slug(self._run_started_at)}.json"
+        )
+        return reports_dir / filename
+
+    def _warn_missing_session_assignment(
+        self,
+        *,
+        task: str,
+        subject: str,
+        session: str,
+    ) -> None:
+        cprint(
+            "Missing session at save boundary; assigned placeholder session "
+            f"{session} for task={task}, subject={subject}. "
+            "Human review and adjustment required.",
+            "yellow",
+        )
+
+    def _record_missing_session_assignment(
+        self,
+        *,
+        task: str,
+        subject: str,
+        session: str,
+    ) -> None:
+        self._missing_session_events.append(
+            {
+                "task": task,
+                "subject_id": subject,
+                "assigned_session": session,
+                "reason": "missing session value at save boundary",
+                "run_started_at": self._run_started_at,
+                "assigned_at": datetime.now(timezone.utc).isoformat(),
+            }
+        )
+
+    def _write_missing_session_report(self) -> None:
+        if not self._missing_session_events:
+            return
+
+        report_path = self._missing_session_report_path()
+        payload = {
+            "run_started_at": self._run_started_at,
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "events": self._missing_session_events,
+        }
+
+        try:
+            report_path.parent.mkdir(parents=True, exist_ok=True)
+            self._atomic_write_text(
+                json.dumps(payload, sort_keys=True, indent=2),
+                report_path,
+            )
+        except OSError as err:
+            cprint(
+                "Missing-session report write failed; processing continued. "
+                f"path={report_path}, error={err}",
+                "yellow",
+            )
+
     def save_dfs(self, categories, task):
         cprint("saving task: " + task, "green")
         self.prime_session_allocator(categories, task)
@@ -340,6 +411,18 @@ class SAVE_EVERYTHING:
                     "yellow",
                 )
                 continue
+
+            if resolution.used_placeholder:
+                self._warn_missing_session_assignment(
+                    task=task,
+                    subject=subject,
+                    session=session,
+                )
+                self._record_missing_session_assignment(
+                    task=task,
+                    subject=subject,
+                    session=session,
+                )
 
             outdir = self._task_data_dir(subject, session, task)
             outdir.mkdir(parents=True, exist_ok=True)
@@ -356,6 +439,8 @@ class SAVE_EVERYTHING:
             if session_key not in self.sessions:
                 self.sessions[session_key] = set()
             self.sessions[session_key].add(session)
+
+        self._write_missing_session_report()
 
     def save_plots(self, plots, task):
         # Validate 'plots' for NoneType objects
