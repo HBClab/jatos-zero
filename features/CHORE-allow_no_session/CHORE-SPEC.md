@@ -150,13 +150,13 @@ This chore is complete when:
 - [x] A test: add coverage for warning content and report-file schema/rows.
 
 ***Checkpoint 4: Meta compatibility and regression coverage***
-- [ ] Validate meta recreation includes placeholder-session records without orchestration changes.
-- [ ] Add/extend e2e tests to cover mixed valid/missing session inputs and duplicate prevention.
-- [ ] Verify unknown-task no-op behavior remains unchanged.
-- [ ] A test: run targeted `pytest` modules for save/meta/e2e session fallback paths.
+- [x] Validate meta recreation includes placeholder-session records without orchestration changes.
+- [x] Add/extend e2e tests to cover mixed valid/missing session inputs and duplicate prevention.
+- [x] Verify unknown-task no-op behavior remains unchanged.
+- [x] A test: run targeted `pytest` modules for save/meta/e2e session fallback paths.
 
 ***Checkpoint 5: Quality gate and documentation polish***
-- [ ] Run lint/test quality gates (`flake8`, `pytest`) and resolve feature-related issues.
-- [ ] Update any adjacent docs/tests referencing "skip on missing session" to new behavior.
-- [ ] Confirm acceptance matrix coverage is complete.
-- [ ] A test: CI-equivalent local run passes for touched areas.
+- [x] Run lint/test quality gates (`flake8`, `pytest`) and resolve feature-related issues.
+- [x] Update any adjacent docs/tests referencing "skip on missing session" to new behavior.
+- [x] Confirm acceptance matrix coverage is complete.
+- [x] A test: CI-equivalent local run passes for touched areas.

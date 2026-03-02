@@ -126,7 +126,7 @@ bash scripts/ci_check.sh
 
 ## Troubleshooting
 - **No data returned from JATOS**: confirm the study IDs in `Handler.IDs` and that your token has access; adjust the `days_ago` window if you are backfilling.
-- **Missing session folders**: ensure input CSVs include `session` or `session_number`. `SAVE_EVERYTHING` uses those columns to label artifacts.
+- **Missing session folders**: if input CSVs omit `session` or `session_number`, `SAVE_EVERYTHING` assigns a deterministic placeholder session per subject/task, saves the artifacts, and writes a `_reports/missing_session_assignments_*.json` file for human follow-up.
 - **WL metrics look stale**: Rerun both WL and DWL so their subject CSVs exist before `META_RECREATE` rebuilds the wide/flat summaries.
 
 ## License & Data Privacy

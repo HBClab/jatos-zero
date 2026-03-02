@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import time
 from pathlib import Path
 
@@ -385,3 +386,85 @@ def test_meta_rebuild_is_skipped_when_saved_data_persistence_is_disabled(
 
     assert meta_called["called"] is False
     assert not any(meta_root.rglob("*"))
+
+
+def test_missing_session_records_receive_unique_placeholders_and_rebuild_meta(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    data_root = tmp_path / "data"
+    meta_root = tmp_path / "meta"
+    data_root.mkdir(parents=True, exist_ok=True)
+    meta_root.mkdir(parents=True, exist_ok=True)
+
+    valid_df = load_dataframe_fixture("af_known_task", "af_minimal_trials.csv")
+    valid_df["session_number"] = 1
+    valid_df["block"] = valid_df["block"].astype(str).str.lower()
+
+    missing_one_df = valid_df.copy()
+    missing_one_df["session"] = pd.NA
+    missing_one_df["session_number"] = pd.NA
+
+    missing_two_df = valid_df.copy()
+    missing_two_df["session"] = pd.NA
+    missing_two_df["session_number"] = pd.NA
+
+    def patched_convert_to_csv(self, txt_dfs):
+        return [valid_df.copy(), missing_one_df.copy(), missing_two_df.copy()]
+
+    monkeypatch.setattr(
+        CONVERT_TO_CSV,
+        "convert_to_csv",
+        patched_convert_to_csv,
+    )
+
+    plot_disabled_config = PipelineRuntimeConfig(
+        schema_version=1,
+        pipeline=PipelineConfig(
+            enable_plots=False,
+            tasks={"AF": TaskRouteConfig(domain="cc", task_ids=[945])},
+        ),
+        config_path=Path("/tmp/pipeline.toml"),
+    )
+    monkeypatch.setattr(
+        main_handler,
+        "load_pipeline_config",
+        lambda **kwargs: plot_disabled_config,
+    )
+
+    original_save_init = SAVE_EVERYTHING.__init__
+
+    def patched_save_init(self):
+        original_save_init(self)
+        self.datadir = str(data_root)
+
+    monkeypatch.setattr(SAVE_EVERYTHING, "__init__", patched_save_init)
+
+    handler = Handler()
+    handler._meta_recreator = META_RECREATE(
+        data_root=data_root,
+        meta_root=meta_root,
+    )
+
+    dummy_txt_frames = [pd.DataFrame([{"file_content": "[]"}])]
+    handler.convert_to_csv(dummy_txt_frames, "AF")
+
+    for session in ("1", "2", "3"):
+        subject_root = data_root / "9001" / session / "AF" / "data"
+        data_files = sorted(subject_root.glob("*.csv"))
+        assert len(data_files) == 1
+        assert data_files[0].name == f"9001_ses-{session}_cat-1.csv"
+
+    report_files = sorted(
+        (data_root / "_reports").glob("missing_session_assignments_*.json")
+    )
+    assert len(report_files) == 1
+    report_payload = json.loads(report_files[0].read_text(encoding="utf-8"))
+    report_events = report_payload["events"]
+    assigned_sessions = sorted(event["assigned_session"] for event in report_events)
+    assert assigned_sessions == ["2", "3"]
+
+    cc_master = pd.read_csv(meta_root / "cc_master.csv")
+    af_rows = cc_master.loc[cc_master["task"] == "AF"].copy()
+    observed_sessions = sorted({str(value) for value in af_rows["session"].dropna()})
+    assert observed_sessions == ["1", "2", "3"]
