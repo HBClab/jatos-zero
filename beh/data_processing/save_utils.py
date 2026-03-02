@@ -328,9 +328,11 @@ class SAVE_EVERYTHING:
 
     def save_dfs(self, categories, task):
         cprint("saving task: " + task, "green")
+        self.prime_session_allocator(categories, task)
         for subjectID, category, df in categories:
             subject = self._normalize_scalar(subjectID)
-            session = self._extract_session_value(df)
+            resolution = self.resolve_session_for_save(subjectID, df, task)
+            session = resolution.session
             if subject is None or session is None:
                 cprint(
                     f"Skipping save for task {task}: invalid subject/session "

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import matplotlib.pyplot as plt
 import pandas as pd
 
 from data_processing.save_utils import SAVE_EVERYTHING
@@ -30,7 +31,7 @@ def test_save_dfs_writes_to_canonical_subject_session_task_layout(
     assert files[0].name == "9001_ses-1_cat-1.csv"
 
 
-def test_save_dfs_skips_malformed_subject_or_session_without_raising(
+def test_save_dfs_persists_missing_session_with_placeholder_assignment(
     tmp_path: Path,
 ) -> None:
     saver = SAVE_EVERYTHING()
@@ -38,6 +39,41 @@ def test_save_dfs_skips_malformed_subject_or_session_without_raising(
 
     missing_session_df = pd.DataFrame([{"subject_id": "9001", "correct": 1}])
     saver.save_dfs(categories=[("9001", 1, missing_session_df)], task="AF")
+
+    data_dir = tmp_path / "9001" / "1" / "AF" / "data"
+    files = sorted(data_dir.glob("*.csv"))
+    assert len(files) == 1
+    assert files[0].name == "9001_ses-1_cat-1.csv"
+
+
+def test_save_plots_uses_placeholder_session_assigned_during_csv_save(
+    tmp_path: Path,
+) -> None:
+    saver = SAVE_EVERYTHING()
+    saver.datadir = str(tmp_path)
+
+    missing_session_df = pd.DataFrame([{"subject_id": "9001", "correct": 1}])
+    saver.save_dfs(categories=[("9001", 1, missing_session_df)], task="AF")
+
+    fig, ax = plt.subplots()
+    ax.plot([1, 2], [3, 4])
+
+    saver.save_plots(plots=[("9001", ax)], task="AF")
+
+    plot_dir = tmp_path / "9001" / "1" / "AF" / "plot"
+    files = sorted(plot_dir.glob("*.png"))
+    assert len(files) == 1
+    assert files[0].name == "9001_ses-1.png"
+
+
+def test_save_dfs_still_skips_invalid_subject_without_raising(
+    tmp_path: Path,
+) -> None:
+    saver = SAVE_EVERYTHING()
+    saver.datadir = str(tmp_path)
+
+    df = pd.DataFrame([{"session_number": 1, "correct": 1}])
+    saver.save_dfs(categories=[(None, 1, df)], task="AF")
 
     assert not any(tmp_path.rglob("*.csv"))
 
