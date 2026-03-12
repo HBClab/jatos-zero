@@ -1,0 +1,109 @@
+schema_version = 1
+
+[pipeline]
+enable_plots = true
+
+[pipeline.outputs]
+enable_saved_data = true
+data_root_path = "."
+data_folder_name = "data"
+
+[pipeline.defaults.columns]
+subject = "subject_id"
+session = "session_number"
+
+[pipeline.tasks.AF]
+domain = "cc"
+task_ids = [945, 960, 990, 898, 919, 932]
+
+[pipeline.tasks.AF.qc]
+threshold = 0.5
+max_rt = 1800
+
+[pipeline.tasks.ATS]
+domain = "cc"
+task_ids = [947, 961, 984, 918, 920, 933]
+
+[pipeline.tasks.ATS.qc]
+threshold = 0.5
+max_rt = 1800
+
+[pipeline.tasks.DSST]
+domain = "ps"
+task_ids = [949, 975, 986, 901, 959, 935]
+
+[pipeline.tasks.DSST.qc]
+threshold = 0.6
+max_rt = 125
+
+[pipeline.tasks.DWL]
+domain = "wl"
+task_ids = [948, 974, 985, 900, 921, 934]
+
+[pipeline.tasks.FN]
+domain = "mem"
+task_ids = [950, 964, 987, 902, 923, 936]
+
+[pipeline.tasks.FN.qc]
+threshold = 0.5
+max_rt = 4000
+
+[pipeline.tasks.LC]
+domain = "ps"
+task_ids = [951, 976, 988, 903, 924, 937]
+
+[pipeline.tasks.LC.qc]
+threshold = 0.6
+max_rt = 30000
+
+[pipeline.tasks.NF]
+domain = "cc"
+task_ids = [980, 981, 982, 978, 979, 977]
+
+[pipeline.tasks.NF.qc]
+threshold = 0.5
+max_rt = 1800
+
+[pipeline.tasks.NNB]
+domain = "cc"
+task_ids = [946, 967, 989, 905, 929, 939]
+
+[pipeline.tasks.NNB.qc]
+threshold = 0.5
+max_rt = 1800
+
+[pipeline.tasks.NTS]
+domain = "cc"
+task_ids = [953, 968, 991, 906, 930, 940]
+
+[pipeline.tasks.NTS.qc]
+threshold = 0.5
+max_rt = 1800
+
+[pipeline.tasks.PC]
+domain = "ps"
+task_ids = [954, 969, 992, 912, 925, 941]
+
+[pipeline.tasks.PC.qc]
+threshold = 0.6
+max_rt = 30000
+
+[pipeline.tasks.SM]
+domain = "mem"
+task_ids = [955, 970, 993, 916, 926, 996]
+
+[pipeline.tasks.SM.qc]
+threshold = 0.5
+max_rt = 2000
+
+[pipeline.tasks.VNB]
+domain = "cc"
+task_ids = [957, 971, 994, 915, 928, 943]
+
+[pipeline.tasks.VNB.qc]
+threshold = 0.5
+max_rt = 1800
+
+[pipeline.tasks.WL]
+domain = "wl"
+task_ids = [958, 972, 995, 910, 927, 944]

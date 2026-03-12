@@ -313,7 +313,7 @@ class Handler:
             proxy=False
         )
 
-        txt_dfs = pull_instance.load(days_ago=127)
+        txt_dfs = pull_instance.load(days_ago=365)
         return self.convert_to_csv(txt_dfs, task)
 
     def convert_to_csv(self, txt_dfs, task):
